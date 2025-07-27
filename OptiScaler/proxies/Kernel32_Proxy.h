@@ -5,6 +5,7 @@
 #include <Util.h>
 #include <Config.h>
 
+#include "Ntdll_Proxy.h"
 #include "KernelBase_Proxy.h"
 
 #include <detours/detours.h>
@@ -35,7 +36,7 @@ class Kernel32Proxy
         _dll = KernelBaseProxy::GetModuleHandleW_()(L"kernel32.dll");
 
         if (_dll == nullptr)
-            _dll = KernelBaseProxy::LoadLibraryExW_()(L"kernel32.dll", NULL, 0);
+            _dll = NtdllProxy::LoadLibraryExW_Ldr(L"kernel32.dll", NULL, 0);
 
         if (_dll == nullptr)
             return;

@@ -5,6 +5,7 @@
 #include "Config.h"
 #include "Logger.h"
 
+#include <proxies/Ntdll_Proxy.h>
 #include <proxies/KernelBase_Proxy.h>
 
 #include <inputs/FfxApi_Dx12.h>
@@ -71,9 +72,9 @@ class FfxApiProxy
             std::filesystem::path libPath(Config::Instance()->FfxDx12Path.value().c_str());
 
             if (libPath.has_filename())
-                _dllDx12 = KernelBaseProxy::LoadLibraryExW_()(libPath.c_str(), NULL, 0);
+                _dllDx12 = NtdllProxy::LoadLibraryExW_Ldr(libPath.c_str(), NULL, 0);
             else
-                _dllDx12 = KernelBaseProxy::LoadLibraryExW_()((libPath / L"amd_fidelityfx_dx12.dll").c_str(), NULL, 0);
+                _dllDx12 = NtdllProxy::LoadLibraryExW_Ldr((libPath / L"amd_fidelityfx_dx12.dll").c_str(), NULL, 0);
 
             if (_dllDx12 != nullptr)
             {
@@ -84,7 +85,7 @@ class FfxApiProxy
 
         if (_dllDx12 == nullptr)
         {
-            _dllDx12 = KernelBaseProxy::LoadLibraryExW_()(L"amd_fidelityfx_dx12.dll", NULL, 0);
+            _dllDx12 = NtdllProxy::LoadLibraryExW_Ldr(L"amd_fidelityfx_dx12.dll", NULL, 0);
 
             if (_dllDx12 != nullptr)
                 LOG_INFO("amd_fidelityfx_dx12.dll loaded from exe folder");
@@ -210,9 +211,9 @@ class FfxApiProxy
             std::filesystem::path libPath(Config::Instance()->FfxVkPath.value().c_str());
 
             if (libPath.has_filename())
-                _dllVk = KernelBaseProxy::LoadLibraryExW_()(libPath.c_str(), NULL, 0);
+                _dllVk = NtdllProxy::LoadLibraryExW_Ldr(libPath.c_str(), NULL, 0);
             else
-                _dllVk = KernelBaseProxy::LoadLibraryExW_()((libPath / L"amd_fidelityfx_vk.dll").c_str(), NULL, 0);
+                _dllVk = NtdllProxy::LoadLibraryExW_Ldr((libPath / L"amd_fidelityfx_vk.dll").c_str(), NULL, 0);
 
             if (_dllVk != nullptr)
             {
@@ -223,7 +224,7 @@ class FfxApiProxy
 
         if (_dllVk == nullptr)
         {
-            _dllVk = KernelBaseProxy::LoadLibraryExW_()(L"amd_fidelityfx_vk.dll", NULL, 0);
+            _dllVk = NtdllProxy::LoadLibraryExW_Ldr(L"amd_fidelityfx_vk.dll", NULL, 0);
 
             if (_dllVk != nullptr)
                 LOG_INFO("amd_fidelityfx_vk.dll loaded from exe folder");

@@ -7,6 +7,7 @@
 #include <Config.h>
 #include <DllNames.h>
 
+#include <proxies/Ntdll_Proxy.h>
 #include <proxies/Kernel32_Proxy.h>
 #include <proxies/KernelBase_Proxy.h>
 #include <proxies/NVNGX_Proxy.h>
@@ -542,7 +543,7 @@ class KernelHooks
         // c:\programdata/nvidia/ngx/models//dlss/versions/20316673/files/160_e658700.bin
         if (lcaseLibName.ends_with(L".bin"))
         {
-            auto loadedBin = KernelBaseProxy::LoadLibraryExW_()(lpLibFullPath, NULL, 0);
+            auto loadedBin = NtdllProxy::LoadLibraryExW_Ldr(lpLibFullPath, NULL, 0);
 
             if (loadedBin && lcaseLibName.contains(L"/versions/"))
             {
@@ -582,8 +583,7 @@ class KernelHooks
                 // Try to load nvapi only from system32, like the original call would
                 if (nvapi == nullptr)
                 {
-                    nvapi =
-                        KernelBaseProxy::LoadLibraryExW_()(lcaseLibName.c_str(), NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
+                    nvapi = NtdllProxy::LoadLibraryExW_Ldr(lcaseLibName.c_str(), NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
                 }
 
                 if (nvapi != nullptr)
@@ -596,7 +596,7 @@ class KernelHooks
         // sl.interposer.dll
         if (CheckDllNameW(&lcaseLibName, &slInterposerNamesW))
         {
-            auto streamlineModule = KernelBaseProxy::LoadLibraryExW_()(lpLibFullPath, NULL, 0);
+            auto streamlineModule = NtdllProxy::LoadLibraryExW_Ldr(lpLibFullPath, NULL, 0);
 
             if (streamlineModule != nullptr)
             {
@@ -616,7 +616,7 @@ class KernelHooks
         if (CheckDllNameW(&lcaseLibName, &slDlssNamesW) ||
             (lcaseLibName.contains(L"/versions/") && lcaseLibName.contains(L"/sl_dlss_")))
         {
-            auto dlssModule = KernelBaseProxy::LoadLibraryExW_()(lpLibFullPath, NULL, 0);
+            auto dlssModule = NtdllProxy::LoadLibraryExW_Ldr(lpLibFullPath, NULL, 0);
 
             if (dlssModule != nullptr)
             {
@@ -634,7 +634,7 @@ class KernelHooks
         if (CheckDllNameW(&lcaseLibName, &slDlssgNamesW) ||
             (lcaseLibName.contains(L"/versions/") && lcaseLibName.contains(L"/sl_dlss_g_")))
         {
-            auto dlssgModule = KernelBaseProxy::LoadLibraryExW_()(lpLibFullPath, NULL, 0);
+            auto dlssgModule = NtdllProxy::LoadLibraryExW_Ldr(lpLibFullPath, NULL, 0);
 
             if (dlssgModule != nullptr)
             {
@@ -652,7 +652,7 @@ class KernelHooks
         if (CheckDllNameW(&lcaseLibName, &slReflexNamesW) ||
             (lcaseLibName.contains(L"/versions/") && lcaseLibName.contains(L"/sl_reflex_")))
         {
-            auto reflexModule = KernelBaseProxy::LoadLibraryExW_()(lpLibFullPath, NULL, 0);
+            auto reflexModule = NtdllProxy::LoadLibraryExW_Ldr(lpLibFullPath, NULL, 0);
 
             if (reflexModule != nullptr)
             {
@@ -670,7 +670,7 @@ class KernelHooks
         if (CheckDllNameW(&lcaseLibName, &slCommonNamesW) ||
             (lcaseLibName.contains(L"/versions/") && lcaseLibName.contains(L"/sl_common_")))
         {
-            auto commonModule = KernelBaseProxy::LoadLibraryExW_()(lpLibFullPath, NULL, 0);
+            auto commonModule = NtdllProxy::LoadLibraryExW_Ldr(lpLibFullPath, NULL, 0);
 
             if (commonModule != nullptr)
             {
@@ -702,7 +702,7 @@ class KernelHooks
             // Game -> Opti -> Overlay
             // And Opti menu works with Overlay without issues
 
-            auto module = KernelBaseProxy::LoadLibraryExW_()(lcaseLibName.c_str(), NULL, 0);
+            auto module = NtdllProxy::LoadLibraryExW_Ldr(lcaseLibName.c_str(), NULL, 0);
 
             if (module != nullptr)
             {
@@ -742,7 +742,7 @@ class KernelHooks
         // Hooks
         if (CheckDllNameW(&lcaseLibName, &dx11NamesW) && Config::Instance()->OverlayMenu.value_or_default())
         {
-            auto module = KernelBaseProxy::LoadLibraryExW_()(lcaseLibName.c_str(), NULL, 0);
+            auto module = NtdllProxy::LoadLibraryExW_Ldr(lcaseLibName.c_str(), NULL, 0);
 
             if (module != nullptr)
                 HooksDx::HookDx11(module);
@@ -752,7 +752,7 @@ class KernelHooks
 
         if (CheckDllNameW(&lcaseLibName, &dx12NamesW) && Config::Instance()->OverlayMenu.value_or_default())
         {
-            auto module = KernelBaseProxy::LoadLibraryExW_()(lcaseLibName.c_str(), NULL, 0);
+            auto module = NtdllProxy::LoadLibraryExW_Ldr(lcaseLibName.c_str(), NULL, 0);
 
             if (module != nullptr)
             {
@@ -765,7 +765,7 @@ class KernelHooks
 
         if (CheckDllNameW(&lcaseLibName, &vkNamesW))
         {
-            auto module = KernelBaseProxy::LoadLibraryExW_()(lcaseLibName.c_str(), NULL, 0);
+            auto module = NtdllProxy::LoadLibraryExW_Ldr(lcaseLibName.c_str(), NULL, 0);
 
             if (module != nullptr)
             {
@@ -784,7 +784,7 @@ class KernelHooks
 
         if (!State::Instance().skipDxgiLoadChecks && CheckDllNameW(&lcaseLibName, &dxgiNamesW))
         {
-            auto module = KernelBaseProxy::LoadLibraryExW_()(lcaseLibName.c_str(), NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
+            auto module = NtdllProxy::LoadLibraryExW_Ldr(lcaseLibName.c_str(), NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
 
             if (module != nullptr)
             {
@@ -800,7 +800,7 @@ class KernelHooks
 
         if (CheckDllNameW(&lcaseLibName, &fsr2NamesW))
         {
-            auto module = KernelBaseProxy::LoadLibraryExW_()(lcaseLibName.c_str(), NULL, 0);
+            auto module = NtdllProxy::LoadLibraryExW_Ldr(lcaseLibName.c_str(), NULL, 0);
 
             if (module != nullptr)
                 HookFSR2Inputs(module);
@@ -810,7 +810,7 @@ class KernelHooks
 
         if (CheckDllNameW(&lcaseLibName, &fsr2BENamesW))
         {
-            auto module = KernelBaseProxy::LoadLibraryExW_()(lcaseLibName.c_str(), NULL, 0);
+            auto module = NtdllProxy::LoadLibraryExW_Ldr(lcaseLibName.c_str(), NULL, 0);
 
             if (module != nullptr)
                 HookFSR2Dx12Inputs(module);
@@ -820,7 +820,7 @@ class KernelHooks
 
         if (CheckDllNameW(&lcaseLibName, &fsr3NamesW))
         {
-            auto module = KernelBaseProxy::LoadLibraryExW_()(lcaseLibName.c_str(), NULL, 0);
+            auto module = NtdllProxy::LoadLibraryExW_Ldr(lcaseLibName.c_str(), NULL, 0);
 
             if (module != nullptr)
                 HookFSR3Inputs(module);
@@ -830,7 +830,7 @@ class KernelHooks
 
         if (CheckDllNameW(&lcaseLibName, &fsr3BENamesW))
         {
-            auto module = KernelBaseProxy::LoadLibraryExW_()(lcaseLibName.c_str(), NULL, 0);
+            auto module = NtdllProxy::LoadLibraryExW_Ldr(lcaseLibName.c_str(), NULL, 0);
 
             if (module != nullptr)
                 HookFSR3Dx12Inputs(module);
@@ -840,8 +840,7 @@ class KernelHooks
 
         if (CheckDllNameW(&lcaseLibName, &xessNamesW))
         {
-            auto module =
-                LoadLibxess(lcaseLibName); // KernelBaseProxy::LoadLibraryExW_()(lcaseLibName.c_str(), NULL, 0);
+            auto module = LoadLibxess(lcaseLibName); // NtdllProxy::LoadLibraryExW_Ldr(lcaseLibName.c_str(), NULL, 0);
 
             if (module != nullptr)
                 XeSSProxy::HookXeSS(module);
@@ -865,7 +864,7 @@ class KernelHooks
         if (CheckDllNameW(&lcaseLibName, &ffxDx12NamesW))
         {
             auto module =
-                LoadFfxapiDx12(lcaseLibName); // KernelBaseProxy::LoadLibraryExW_()(lcaseLibName.c_str(), NULL, 0);
+                LoadFfxapiDx12(lcaseLibName); // NtdllProxy::LoadLibraryExW_Ldr(lcaseLibName.c_str(), NULL, 0);
 
             if (module != nullptr)
                 FfxApiProxy::InitFfxDx12(module);
@@ -875,8 +874,7 @@ class KernelHooks
 
         if (CheckDllNameW(&lcaseLibName, &ffxVkNamesW))
         {
-            auto module =
-                LoadFfxapiVk(lcaseLibName); // KernelBaseProxy::LoadLibraryExW_()(lcaseLibName.c_str(), NULL, 0);
+            auto module = LoadFfxapiVk(lcaseLibName); // NtdllProxy::LoadLibraryExW_Ldr(lcaseLibName.c_str(), NULL, 0);
 
             if (module != nullptr)
                 FfxApiProxy::InitFfxVk(module);
@@ -893,7 +891,7 @@ class KernelHooks
 
         if (Config::Instance()->NvapiDllPath.has_value())
         {
-            nvapi = KernelBaseProxy::LoadLibraryExW_()(Config::Instance()->NvapiDllPath->c_str(), NULL, 0);
+            nvapi = NtdllProxy::LoadLibraryExW_Ldr(Config::Instance()->NvapiDllPath->c_str(), NULL, 0);
 
             if (nvapi != nullptr)
             {
@@ -905,7 +903,7 @@ class KernelHooks
         if (nvapi == nullptr)
         {
             auto localPath = Util::DllPath().parent_path() / L"nvapi64.dll";
-            nvapi = KernelBaseProxy::LoadLibraryExW_()(localPath.wstring().c_str(), NULL, 0);
+            nvapi = NtdllProxy::LoadLibraryExW_Ldr(localPath.wstring().c_str(), NULL, 0);
 
             if (nvapi != nullptr)
             {
@@ -916,7 +914,7 @@ class KernelHooks
 
         if (nvapi == nullptr)
         {
-            nvapi = KernelBaseProxy::LoadLibraryExW_()(L"nvapi64.dll", NULL, 0);
+            nvapi = NtdllProxy::LoadLibraryExW_Ldr(L"nvapi64.dll", NULL, 0);
 
             if (nvapi != nullptr)
             {
@@ -934,8 +932,7 @@ class KernelHooks
 
         if (Config::Instance()->NVNGX_DLSS_Library.has_value())
         {
-            nvngxDlss =
-                KernelBaseProxy::LoadLibraryExW_()(Config::Instance()->NVNGX_DLSS_Library.value().c_str(), NULL, 0);
+            nvngxDlss = NtdllProxy::LoadLibraryExW_Ldr(Config::Instance()->NVNGX_DLSS_Library.value().c_str(), NULL, 0);
 
             if (nvngxDlss != nullptr)
             {
@@ -952,7 +949,7 @@ class KernelHooks
 
         if (nvngxDlss == nullptr)
         {
-            nvngxDlss = KernelBaseProxy::LoadLibraryExW_()(originalPath.c_str(), NULL, 0);
+            nvngxDlss = NtdllProxy::LoadLibraryExW_Ldr(originalPath.c_str(), NULL, 0);
 
             if (nvngxDlss != nullptr)
             {
@@ -976,9 +973,9 @@ class KernelHooks
             std::filesystem::path libPath(Config::Instance()->XeSSLibrary.value().c_str());
 
             if (libPath.has_filename())
-                libxess = KernelBaseProxy::LoadLibraryExW_()(libPath.c_str(), NULL, 0);
+                libxess = NtdllProxy::LoadLibraryExW_Ldr(libPath.c_str(), NULL, 0);
             else
-                libxess = KernelBaseProxy::LoadLibraryExW_()((libPath / L"libxess.dll").c_str(), NULL, 0);
+                libxess = NtdllProxy::LoadLibraryExW_Ldr((libPath / L"libxess.dll").c_str(), NULL, 0);
 
             if (libxess != nullptr)
             {
@@ -993,7 +990,7 @@ class KernelHooks
 
         if (libxess == nullptr)
         {
-            libxess = KernelBaseProxy::LoadLibraryExW_()(originalPath.c_str(), NULL, 0);
+            libxess = NtdllProxy::LoadLibraryExW_Ldr(originalPath.c_str(), NULL, 0);
 
             if (libxess != nullptr)
             {
@@ -1017,9 +1014,9 @@ class KernelHooks
             std::filesystem::path libPath(Config::Instance()->XeSSDx11Library.value().c_str());
 
             if (libPath.has_filename())
-                libxess = KernelBaseProxy::LoadLibraryExW_()(libPath.c_str(), NULL, 0);
+                libxess = NtdllProxy::LoadLibraryExW_Ldr(libPath.c_str(), NULL, 0);
             else
-                libxess = KernelBaseProxy::LoadLibraryExW_()((libPath / L"libxess_dx11.dll").c_str(), NULL, 0);
+                libxess = NtdllProxy::LoadLibraryExW_Ldr((libPath / L"libxess_dx11.dll").c_str(), NULL, 0);
 
             if (libxess != nullptr)
             {
@@ -1036,7 +1033,7 @@ class KernelHooks
 
         if (libxess == nullptr)
         {
-            libxess = KernelBaseProxy::LoadLibraryExW_()(originalPath.c_str(), NULL, 0);
+            libxess = NtdllProxy::LoadLibraryExW_Ldr(originalPath.c_str(), NULL, 0);
 
             if (libxess != nullptr)
             {
@@ -1060,9 +1057,9 @@ class KernelHooks
             std::filesystem::path libPath(Config::Instance()->FfxDx12Path.value().c_str());
 
             if (libPath.has_filename())
-                ffxDx12 = KernelBaseProxy::LoadLibraryExW_()(libPath.c_str(), NULL, 0);
+                ffxDx12 = NtdllProxy::LoadLibraryExW_Ldr(libPath.c_str(), NULL, 0);
             else
-                ffxDx12 = KernelBaseProxy::LoadLibraryExW_()((libPath / L"amd_fidelityfx_dx12.dll").c_str(), NULL, 0);
+                ffxDx12 = NtdllProxy::LoadLibraryExW_Ldr((libPath / L"amd_fidelityfx_dx12.dll").c_str(), NULL, 0);
 
             if (ffxDx12 != nullptr)
             {
@@ -1079,7 +1076,7 @@ class KernelHooks
 
         if (ffxDx12 == nullptr)
         {
-            ffxDx12 = KernelBaseProxy::LoadLibraryExW_()(originalPath.c_str(), NULL, 0);
+            ffxDx12 = NtdllProxy::LoadLibraryExW_Ldr(originalPath.c_str(), NULL, 0);
 
             if (ffxDx12 != nullptr)
             {
@@ -1103,9 +1100,9 @@ class KernelHooks
             std::filesystem::path libPath(Config::Instance()->FfxVkPath.value().c_str());
 
             if (libPath.has_filename())
-                ffxVk = KernelBaseProxy::LoadLibraryExW_()(libPath.c_str(), NULL, 0);
+                ffxVk = NtdllProxy::LoadLibraryExW_Ldr(libPath.c_str(), NULL, 0);
             else
-                ffxVk = KernelBaseProxy::LoadLibraryExW_()((libPath / L"amd_fidelityfx_vk.dll").c_str(), NULL, 0);
+                ffxVk = NtdllProxy::LoadLibraryExW_Ldr((libPath / L"amd_fidelityfx_vk.dll").c_str(), NULL, 0);
 
             if (ffxVk != nullptr)
             {
@@ -1122,7 +1119,7 @@ class KernelHooks
 
         if (ffxVk == nullptr)
         {
-            ffxVk = KernelBaseProxy::LoadLibraryExW_()(originalPath.c_str(), NULL, 0);
+            ffxVk = NtdllProxy::LoadLibraryExW_Ldr(originalPath.c_str(), NULL, 0);
 
             if (ffxVk != nullptr)
             {
@@ -1840,11 +1837,11 @@ class KernelHooks
 
         LOG_DEBUG("");
 
-        o_K32_FreeLibrary = Kernel32Proxy::Hook_FreeLibrary(hk_K32_FreeLibrary);
-        o_K32_LoadLibraryA = Kernel32Proxy::Hook_LoadLibraryA(hk_K32_LoadLibraryA);
-        o_K32_LoadLibraryW = Kernel32Proxy::Hook_LoadLibraryW(hk_K32_LoadLibraryW);
-        o_K32_LoadLibraryExA = Kernel32Proxy::Hook_LoadLibraryExA(hk_K32_LoadLibraryExA);
-        o_K32_LoadLibraryExW = Kernel32Proxy::Hook_LoadLibraryExW(hk_K32_LoadLibraryExW);
+        // o_K32_FreeLibrary = Kernel32Proxy::Hook_FreeLibrary(hk_K32_FreeLibrary);
+        // o_K32_LoadLibraryA = Kernel32Proxy::Hook_LoadLibraryA(hk_K32_LoadLibraryA);
+        // o_K32_LoadLibraryW = Kernel32Proxy::Hook_LoadLibraryW(hk_K32_LoadLibraryW);
+        // o_K32_LoadLibraryExA = Kernel32Proxy::Hook_LoadLibraryExA(hk_K32_LoadLibraryExA);
+        // o_K32_LoadLibraryExW = Kernel32Proxy::Hook_LoadLibraryExW(hk_K32_LoadLibraryExW);
         o_K32_GetProcAddress = Kernel32Proxy::Hook_GetProcAddress(hk_K32_GetProcAddress);
         o_K32_GetModuleHandleA = Kernel32Proxy::Hook_GetModuleHandleA(hk_K32_GetModuleHandleA);
         o_K32_GetFileAttributesW = Kernel32Proxy::Hook_GetFileAttributesW(hk_K32_GetFileAttributesW);
@@ -1866,7 +1863,7 @@ class KernelHooks
             // o_KB_LoadLibraryA = KernelBaseProxy::Hook_LoadLibraryA(hk_KB_LoadLibraryA);
             // o_KB_LoadLibraryW = KernelBaseProxy::Hook_LoadLibraryW(hk_KB_LoadLibraryW);
             // o_KB_LoadLibraryExA = KernelBaseProxy::Hook_LoadLibraryExA(hk_KB_LoadLibraryExA);
-            o_KB_LoadLibraryExW = KernelBaseProxy::Hook_LoadLibraryExW(hk_KB_LoadLibraryExW);
+            // o_KB_LoadLibraryExW = KernelBaseProxy::Hook_LoadLibraryExW(hk_KB_LoadLibraryExW);
         }
 
         o_KB_GetProcAddress = KernelBaseProxy::Hook_GetProcAddress(hk_KB_GetProcAddress);

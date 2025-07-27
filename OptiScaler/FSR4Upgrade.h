@@ -3,6 +3,7 @@
 #include <pch.h>
 
 #include <proxies/Dxgi_Proxy.h>
+#include <proxies/Ntdll_Proxy.h>
 #include <proxies/KernelBase_Proxy.h>
 
 #include <detours/detours.h>
@@ -69,7 +70,7 @@ inline static std::vector<std::filesystem::path> GetDriverStore()
 
     if (hGdi32 == nullptr)
     {
-        hGdi32 = KernelBaseProxy::LoadLibraryExW_()(L"Gdi32.dll", NULL, 0);
+        hGdi32 = NtdllProxy::LoadLibraryExW_Ldr(L"Gdi32.dll", NULL, 0);
         libraryLoaded = hGdi32 != nullptr;
     }
 
@@ -267,7 +268,7 @@ struct AmdExtFfxApi : public IAmdExtFfxApi
 
         if (o_UpdateFfxApiProvider == nullptr)
         {
-            fsr4Module = KernelBaseProxy::LoadLibraryExW_()(L"amdxcffx64.dll", NULL, 0);
+            fsr4Module = NtdllProxy::LoadLibraryExW_Ldr(L"amdxcffx64.dll", NULL, 0);
 
             if (fsr4Module == nullptr)
             {
@@ -279,7 +280,7 @@ struct AmdExtFfxApi : public IAmdExtFfxApi
                     {
                         auto dllPath = storePath[i] / L"amdxcffx64.dll";
                         LOG_DEBUG("Trying to load: {}", wstring_to_string(dllPath.c_str()));
-                        fsr4Module = KernelBaseProxy::LoadLibraryExW_()(dllPath.c_str(), NULL, 0);
+                        fsr4Module = NtdllProxy::LoadLibraryExW_Ldr(dllPath.c_str(), NULL, 0);
 
                         if (fsr4Module != nullptr)
                         {
@@ -487,7 +488,7 @@ inline void InitFSR4Update()
     // For FSR4 Upgrade
     moduleAmdxc64 = KernelBaseProxy::GetModuleHandleW_()(L"amdxc64.dll");
     if (moduleAmdxc64 == nullptr)
-        moduleAmdxc64 = KernelBaseProxy::LoadLibraryExW_()(L"amdxc64.dll", NULL, 0);
+        moduleAmdxc64 = NtdllProxy::LoadLibraryExW_Ldr(L"amdxc64.dll", NULL, 0);
 
     if (moduleAmdxc64 != nullptr)
     {

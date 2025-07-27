@@ -5,6 +5,7 @@
 #include "Config.h"
 #include "Logger.h"
 
+#include <proxies/Ntdll_Proxy.h>
 #include <proxies/KernelBase_Proxy.h>
 
 #include <inputs/XeSS_Common.h>
@@ -255,14 +256,14 @@ class XeSSProxy
             LOG_INFO("Trying to load libxess.dll from ini path: {}", cfgPath.string());
 
             cfgPath = cfgPath / libraryName;
-            mainModule = KernelBaseProxy::LoadLibraryExW_()(cfgPath.c_str(), NULL, 0);
+            mainModule = NtdllProxy::LoadLibraryExW_Ldr(cfgPath.c_str(), NULL, 0);
         }
 
         if (mainModule == nullptr)
         {
             std::filesystem::path libXessPath = dllPath.parent_path() / libraryName;
             LOG_INFO("Trying to load libxess.dll from dll path: {}", libXessPath.string());
-            mainModule = KernelBaseProxy::LoadLibraryExW_()(libXessPath.c_str(), NULL, 0);
+            mainModule = NtdllProxy::LoadLibraryExW_Ldr(libXessPath.c_str(), NULL, 0);
         }
 
         if (mainModule != nullptr)
@@ -298,14 +299,14 @@ class XeSSProxy
                 LOG_INFO("Trying to load libxess.dll from ini path: {}", cfgPath.string());
 
                 auto dx11Path = cfgPath.parent_path() / libraryName;
-                dx11Module = KernelBaseProxy::LoadLibraryExW_()(dx11Path.c_str(), NULL, 0);
+                dx11Module = NtdllProxy::LoadLibraryExW_Ldr(dx11Path.c_str(), NULL, 0);
             }
 
             if (dx11Module == nullptr)
             {
                 std::filesystem::path libXessDx11Path = dllPath.parent_path() / libraryName;
                 LOG_INFO("Trying to load libxess.dll from dll path: {}", libXessDx11Path.string());
-                dx11Module = KernelBaseProxy::LoadLibraryExW_()(libXessDx11Path.c_str(), NULL, 0);
+                dx11Module = NtdllProxy::LoadLibraryExW_Ldr(libXessDx11Path.c_str(), NULL, 0);
             }
         } while (false);
 
@@ -334,9 +335,9 @@ class XeSSProxy
             std::filesystem::path libPath(Config::Instance()->XeSSLibrary.value().c_str());
 
             if (libPath.has_filename())
-                _dll = KernelBaseProxy::LoadLibraryExW_()(libPath.c_str(), NULL, 0);
+                _dll = NtdllProxy::LoadLibraryExW_Ldr(libPath.c_str(), NULL, 0);
             else
-                _dll = KernelBaseProxy::LoadLibraryExW_()((libPath / L"libxess.dll").c_str(), NULL, 0);
+                _dll = NtdllProxy::LoadLibraryExW_Ldr((libPath / L"libxess.dll").c_str(), NULL, 0);
 
             if (_dll != nullptr)
             {
@@ -346,7 +347,7 @@ class XeSSProxy
 
         if (_dll == nullptr)
         {
-            _dll = KernelBaseProxy::LoadLibraryExW_()(L"libxess.dll", NULL, 0);
+            _dll = NtdllProxy::LoadLibraryExW_Ldr(L"libxess.dll", NULL, 0);
 
             if (_dll != nullptr)
                 LOG_INFO("libxess.dll loaded from exe folder");
@@ -622,9 +623,9 @@ class XeSSProxy
             std::filesystem::path libPath(Config::Instance()->XeSSDx11Library.value().c_str());
 
             if (libPath.has_filename())
-                _dlldx11 = KernelBaseProxy::LoadLibraryExW_()(libPath.c_str(), NULL, 0);
+                _dlldx11 = NtdllProxy::LoadLibraryExW_Ldr(libPath.c_str(), NULL, 0);
             else
-                _dlldx11 = KernelBaseProxy::LoadLibraryExW_()((libPath / L"libxess_dx11.dll").c_str(), NULL, 0);
+                _dlldx11 = NtdllProxy::LoadLibraryExW_Ldr((libPath / L"libxess_dx11.dll").c_str(), NULL, 0);
 
             if (_dlldx11 != nullptr)
             {
@@ -635,7 +636,7 @@ class XeSSProxy
 
         if (_dlldx11 == nullptr)
         {
-            _dlldx11 = KernelBaseProxy::LoadLibraryExW_()(L"libxess_dx11.dll", NULL, 0);
+            _dlldx11 = NtdllProxy::LoadLibraryExW_Ldr(L"libxess_dx11.dll", NULL, 0);
 
             if (_dlldx11 != nullptr)
                 LOG_INFO("libxess_dx11.dll loaded from exe folder");

@@ -5,6 +5,7 @@
 #include <State.h>
 
 #include <proxies/KernelBase_Proxy.h>
+#include <proxies/Ntdll_Proxy.h>
 
 #include <detours/detours.h>
 
@@ -69,7 +70,7 @@ class D3d12Proxy
             _dll = KernelBaseProxy::GetModuleHandleW_()(L"d3d12.dll");
 
             if (_dll == nullptr)
-                _dll = KernelBaseProxy::LoadLibraryExW_()(L"d3d12.dll", NULL, 0);
+                _dll = NtdllProxy::LoadLibraryExW_Ldr(L"d3d12.dll", NULL, 0);
         }
         else
         {
