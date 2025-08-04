@@ -689,7 +689,8 @@ void ResTrack_Dx12::hkExecuteCommandLists(ID3D12CommandQueue* This, UINT NumComm
     auto fg = State::Instance().currentFG;
     auto index = fg == nullptr ? 0 : fg->GetIndex();
 
-    if (State::Instance().activeFgType == OptiFG && (_hudlessCmdList != nullptr || _inputsCmdList != nullptr))
+    if ((State::Instance().activeFgInput == FGInput::Upscaler || State::Instance().activeFgInput == FGInput::DLSSG) &&
+        (_hudlessCmdList != nullptr || _inputsCmdList != nullptr))
     {
         int cmdListCount = 0;
         int targetListCount = (_inputsCmdList == nullptr ? 0 : 1) + (fg->NoHudless() ? 0 : 1);
@@ -1504,8 +1505,8 @@ void ResTrack_Dx12::hkClose(ID3D12GraphicsCommandList* This)
     auto fg = State::Instance().currentFG;
     auto index = fg != nullptr ? fg->GetIndex() : 0;
 
-    if (State::Instance().activeFgType == OptiFG && fg != nullptr &&
-        (_inputsCommandList[index] != nullptr || _hudlessCommandList[index] != nullptr))
+    if ((State::Instance().activeFgInput == FGInput::Upscaler || State::Instance().activeFgInput == FGInput::DLSSG) &&
+        fg != nullptr && (_inputsCommandList[index] != nullptr || _hudlessCommandList[index] != nullptr))
     {
 
         if (fg->IsActive() && fg->TargetFrame() < fg->FrameCount())
@@ -1529,7 +1530,11 @@ void ResTrack_Dx12::hkClose(ID3D12GraphicsCommandList* This)
                 {
                     LOG_DEBUG("Upscaler CmdList: {:X}", (size_t) This);
 
-                    fg->SetUpscaleInputsReady();
+                    fg->SetVelocityReady();
+                    fg->SetDepthReady();
+
+                    // Technically we don't check if UI wasn't ready but it should be fine
+                    fg->SetUIReady();
 
                     _inputsCmdList = _inputsCommandList[index];
                     _inputsCommandList[index] = nullptr;
@@ -1745,9 +1750,6 @@ void ResTrack_Dx12::HookToQueue(ID3D12Device* InDevice)
 
 void ResTrack_Dx12::HookDevice(ID3D12Device* device)
 {
-    if (State::Instance().activeFgType != OptiFG || !Config::Instance()->OverlayMenu.value_or_default())
-        return;
-
     if (o_CreateDescriptorHeap != nullptr || device == nullptr)
         return;
 

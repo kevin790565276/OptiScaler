@@ -12,9 +12,8 @@ class FSRFG_Dx12 : public virtual IFGFeature_Dx12
   private:
     ffxContext _swapChainContext = nullptr;
     ffxContext _fgContext = nullptr;
-    ID3D12GraphicsCommandList* _dispatchCommandList = nullptr;
-
-    void GetDispatchCommandList();
+    uint32_t _lastHudlessFormat = FFX_API_SURFACE_FORMAT_UNKNOWN;
+    uint32_t _usingHudlessFormat = FFX_API_SURFACE_FORMAT_UNKNOWN;
 
   public:
     // IFGFeature
@@ -30,7 +29,9 @@ class FSRFG_Dx12 : public virtual IFGFeature_Dx12
                           DXGI_SWAP_CHAIN_FULLSCREEN_DESC* pFullscreenDesc, IDXGISwapChain1** swapChain) override final;
     bool ReleaseSwapchain(HWND hwnd) override final;
 
-    void CreateContext(ID3D12Device* device, int featureFlags, uint32_t width, uint32_t height) override final;
+    void CreateContext(ID3D12Device* device, FG_Constants& fgConstants) override final;
+
+    void EvaluateState(ID3D12Device* device, FG_Constants& fgConstants) override final;
 
     bool Dispatch(ID3D12GraphicsCommandList* cmdList, bool useHudless, double frameTime) override final;
 
