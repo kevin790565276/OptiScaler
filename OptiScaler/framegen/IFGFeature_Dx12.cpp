@@ -421,7 +421,10 @@ void IFGFeature_Dx12::Present()
     _hudlessDispatchReady[fIndex] = false;
 }
 
-bool IFGFeature_Dx12::UpscalerInputsReady() { return _velocityReady[GetIndex()] && _depthReady[GetIndex()]; }
+bool IFGFeature_Dx12::VelocityReady() { return _velocityReady[GetIndex()]; }
+bool IFGFeature_Dx12::DepthReady() { return _depthReady[GetIndex()]; }
+bool IFGFeature_Dx12::UIReady() { return _uiReady[GetIndex()]; }
+
 bool IFGFeature_Dx12::HudlessReady() { return _hudlessReady[GetIndex()]; }
 
 // Only makes sense for upscaler inputs because the list of buffers

@@ -143,7 +143,7 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         depthSent = true;
 
-        ResTrack_Dx12::SetInputsCmdList(cmdBuffer);
+        ResTrack_Dx12::SetDepthCmdList(cmdBuffer);
 
         auto depthResource = (ID3D12Resource*) tag.resource->native;
 
@@ -158,7 +158,7 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         mvsSent = true;
 
-        ResTrack_Dx12::SetInputsCmdList(cmdBuffer);
+        ResTrack_Dx12::SetMVsCmdList(cmdBuffer);
 
         auto mvResource = (ID3D12Resource*) tag.resource->native;
 
@@ -175,7 +175,7 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         uiSent = true;
 
-        ResTrack_Dx12::SetInputsCmdList(cmdBuffer);
+        ResTrack_Dx12::SetUICmdList(cmdBuffer);
 
         auto uiResource = (ID3D12Resource*) tag.resource->native;
 
@@ -196,21 +196,19 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
     // Will trigger frame count update on the next call to reportResource
     allRequiredSent = hudlessSent && depthSent && mvsSent && (uiRequired && uiSent || !uiRequired);
 
-    if (allRequiredSent)
-    {
-        State::Instance().slFGInputs.dispatchFG((ID3D12GraphicsCommandList*) cmdBuffer);
-
-        depthSent = false;
-        hudlessSent = false;
-        mvsSent = false;
-        uiSent = false;
-    }
+    // if (allRequiredSent)
+    //     State::Instance().slFGInputs.dispatchFG((ID3D12GraphicsCommandList*) cmdBuffer);
 
     return true;
 }
 
 bool Sl_Inputs_Dx12::dispatchFG(ID3D12GraphicsCommandList* cmdBuffer)
 {
+    depthSent = false;
+    hudlessSent = false;
+    mvsSent = false;
+    uiSent = false;
+
     auto fgOutput = reinterpret_cast<IFGFeature_Dx12*>(State::Instance().currentFG);
 
     if (fgOutput == nullptr)

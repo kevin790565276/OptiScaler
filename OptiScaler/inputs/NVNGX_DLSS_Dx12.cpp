@@ -1597,7 +1597,8 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D12_EvaluateFeature(ID3D12GraphicsCom
             fg->Mutex.unlockThis(4);
         }
 
-        ResTrack_Dx12::SetInputsCmdList(InCmdList);
+        ResTrack_Dx12::SetDepthCmdList(InCmdList);
+        ResTrack_Dx12::SetMVsCmdList(InCmdList);
         bool allocatorReset = false;
         frameIndex = fg->GetIndex();
 

@@ -285,8 +285,8 @@ static HRESULT hkFGPresent(void* This, UINT SyncInterval, UINT Flags)
 
     if (willPresent && State::Instance().currentCommandQueue != nullptr &&
         State::Instance().activeFgInput == FGInput::Upscaler && fg != nullptr && fg->IsActive() &&
-        fg->TargetFrame() < fg->FrameCount() && fg->LastDispatchedFrame() != fg->FrameCount() &&
-        fg->UpscalerInputsReady())
+        fg->TargetFrame() < fg->FrameCount() && fg->LastDispatchedFrame() != fg->FrameCount() && fg->DepthReady() &&
+        fg->VelocityReady())
     {
         State::Instance().fgTrigSource = "Present";
         fg->Present();
@@ -298,6 +298,12 @@ static HRESULT hkFGPresent(void* This, UINT SyncInterval, UINT Flags)
             auto cmdList = fg->GetCommandList();
             State::Instance().currentCommandQueue->ExecuteCommandLists(1, &cmdList);
         }
+    }
+
+    if (willPresent && State::Instance().activeFgInput == FGInput::DLSSG &&
+        State::Instance().slFGInputs.readyForDispatch())
+    {
+        State::Instance().slFGInputs.dispatchFG(nullptr);
     }
 
     // if (willPresent && State::Instance().currentCommandQueue != nullptr &&

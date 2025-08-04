@@ -131,7 +131,9 @@ class IFGFeature_Dx12 : public virtual IFGFeature
     void SetUIReady() override;
     void SetHudlessDispatchReady() override;
     void Present() override;
-    bool UpscalerInputsReady() override;
+    bool VelocityReady() override;
+    bool DepthReady() override;
+    bool UIReady() override;
     bool HudlessReady() override;
     bool ReadyForExecute() override;
 };

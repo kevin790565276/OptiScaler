@@ -105,7 +105,9 @@ static std::unique_ptr<HeapInfo> fgHeaps[1000];
 static UINT fgHeapIndex = 0;
 
 static void* _hudlessCmdList = nullptr;
-static void* _inputsCmdList = nullptr;
+static void* _depthCmdList = nullptr;
+static void* _mvsCmdList = nullptr;
+static void* _uiCmdList = nullptr;
 
 struct HeapCacheTLS
 {
@@ -690,18 +692,33 @@ void ResTrack_Dx12::hkExecuteCommandLists(ID3D12CommandQueue* This, UINT NumComm
     auto index = fg == nullptr ? 0 : fg->GetIndex();
 
     if ((State::Instance().activeFgInput == FGInput::Upscaler || State::Instance().activeFgInput == FGInput::DLSSG) &&
-        (_hudlessCmdList != nullptr || _inputsCmdList != nullptr))
+        (_hudlessCmdList != nullptr || _depthCmdList != nullptr || _mvsCmdList != nullptr || _uiCmdList != nullptr))
     {
         int cmdListCount = 0;
-        int targetListCount = (_inputsCmdList == nullptr ? 0 : 1) + (fg->NoHudless() ? 0 : 1);
+        int targetListCount = (_depthCmdList == nullptr ? 0 : 1) + (_mvsCmdList == nullptr ? 0 : 1) +
+                              (_uiCmdList == nullptr ? 0 : 1) + (fg->NoHudless() ? 0 : 1);
 
         for (size_t i = 0; i < NumCommandLists; i++)
         {
-            if (_inputsCmdList != nullptr && _inputsCmdList == ppCommandLists[i])
+            if (_depthCmdList != nullptr && _depthCmdList == ppCommandLists[i])
             {
-                LOG_DEBUG("_inputsCmdList: {:X}", (size_t) _inputsCmdList);
+                LOG_DEBUG("_depthCmdList: {:X}", (size_t) _depthCmdList);
                 cmdListCount++;
-                _inputsCmdList = nullptr;
+                _depthCmdList = nullptr;
+            }
+
+            if (_mvsCmdList != nullptr && _mvsCmdList == ppCommandLists[i])
+            {
+                LOG_DEBUG("_mvsCmdList: {:X}", (size_t) _mvsCmdList);
+                cmdListCount++;
+                _mvsCmdList = nullptr;
+            }
+
+            if (_uiCmdList != nullptr && _uiCmdList == ppCommandLists[i])
+            {
+                LOG_DEBUG("_uiCmdList: {:X}", (size_t) _uiCmdList);
+                cmdListCount++;
+                _uiCmdList = nullptr;
             }
 
             if (_hudlessCmdList != nullptr && _hudlessCmdList == ppCommandLists[i])
@@ -1490,10 +1507,20 @@ void ResTrack_Dx12::hkExecuteBundle(ID3D12GraphicsCommandList* This, ID3D12Graph
             LOG_DEBUG("Hudless cmdlist[{}]: {:X}", index, (size_t) This);
             _hudlessCommandList[index] = This;
         }
-        else if (pCommandList == _inputsCommandList[index])
+        else if (pCommandList == _mvsCommandList[index])
         {
-            LOG_DEBUG("Upscaler cmdlist[{}]: {:X}", index, (size_t) This);
-            _inputsCommandList[index] = This;
+            LOG_DEBUG("Velocity cmdlist[{}]: {:X}", index, (size_t) This);
+            _mvsCommandList[index] = This;
+        }
+        else if (pCommandList == _depthCommandList[index])
+        {
+            LOG_DEBUG("Depth cmdlist[{}]: {:X}", index, (size_t) This);
+            _depthCommandList[index] = This;
+        }
+        else if (pCommandList == _uiCommandList[index])
+        {
+            LOG_DEBUG("UI cmdlist[{}]: {:X}", index, (size_t) This);
+            _uiCommandList[index] = This;
         }
     }
 
@@ -1506,7 +1533,9 @@ void ResTrack_Dx12::hkClose(ID3D12GraphicsCommandList* This)
     auto index = fg != nullptr ? fg->GetIndex() : 0;
 
     if ((State::Instance().activeFgInput == FGInput::Upscaler || State::Instance().activeFgInput == FGInput::DLSSG) &&
-        fg != nullptr && (_inputsCommandList[index] != nullptr || _hudlessCommandList[index] != nullptr))
+        fg != nullptr &&
+        (_depthCommandList[index] != nullptr || _mvsCommandList[index] != nullptr || _uiCommandList[index] != nullptr ||
+         _hudlessCommandList[index] != nullptr))
     {
 
         if (fg->IsActive() && fg->TargetFrame() < fg->FrameCount())
@@ -1524,20 +1553,42 @@ void ResTrack_Dx12::hkClose(ID3D12GraphicsCommandList* This)
                 }
             }
 
-            if (!fg->UpscalerInputsReady())
+            if (!fg->VelocityReady())
             {
-                if (This == _inputsCommandList[index])
+                if (This == _mvsCommandList[index])
                 {
-                    LOG_DEBUG("Upscaler CmdList: {:X}", (size_t) This);
+                    LOG_DEBUG("Velocity CmdList: {:X}", (size_t) This);
 
                     fg->SetVelocityReady();
+
+                    _mvsCmdList = _mvsCommandList[index];
+                    _mvsCommandList[index] = nullptr;
+                }
+            }
+
+            if (!fg->DepthReady())
+            {
+                if (This == _depthCommandList[index])
+                {
+                    LOG_DEBUG("Depth CmdList: {:X}", (size_t) This);
+
                     fg->SetDepthReady();
 
-                    // Technically we don't check if UI wasn't ready but it should be fine
+                    _depthCmdList = _depthCommandList[index];
+                    _depthCommandList[index] = nullptr;
+                }
+            }
+
+            if (!fg->UIReady())
+            {
+                if (This == _uiCommandList[index])
+                {
+                    LOG_DEBUG("UI CmdList: {:X}", (size_t) This);
+
                     fg->SetUIReady();
 
-                    _inputsCmdList = _inputsCommandList[index];
-                    _inputsCommandList[index] = nullptr;
+                    _uiCmdList = _uiCommandList[index];
+                    _uiCommandList[index] = nullptr;
                 }
             }
         }
@@ -1816,17 +1867,41 @@ void ResTrack_Dx12::ClearPossibleHudless()
     fgPossibleHudless[fIndex].clear();
 
     _hudlessCmdList = nullptr;
-    _inputsCmdList = nullptr;
+    _depthCmdList = nullptr;
+    _mvsCmdList = nullptr;
+    _uiCmdList = nullptr;
 }
 
-void ResTrack_Dx12::SetInputsCmdList(ID3D12GraphicsCommandList* cmdList)
+void ResTrack_Dx12::SetDepthCmdList(ID3D12GraphicsCommandList* cmdList)
 {
     auto fg = State::Instance().currentFG;
     if (fg != nullptr && fg->IsActive())
     {
         auto index = fg->FrameCount() % BUFFER_COUNT;
         LOG_DEBUG("cmdList[{}]: {:X}", index, (size_t) cmdList);
-        _inputsCommandList[index] = cmdList;
+        _depthCommandList[index] = cmdList;
+    }
+}
+
+void ResTrack_Dx12::SetMVsCmdList(ID3D12GraphicsCommandList* cmdList)
+{
+    auto fg = State::Instance().currentFG;
+    if (fg != nullptr && fg->IsActive())
+    {
+        auto index = fg->FrameCount() % BUFFER_COUNT;
+        LOG_DEBUG("cmdList[{}]: {:X}", index, (size_t) cmdList);
+        _mvsCommandList[index] = cmdList;
+    }
+}
+
+void ResTrack_Dx12::SetUICmdList(ID3D12GraphicsCommandList* cmdList)
+{
+    auto fg = State::Instance().currentFG;
+    if (fg != nullptr && fg->IsActive())
+    {
+        auto index = fg->FrameCount() % BUFFER_COUNT;
+        LOG_DEBUG("cmdList[{}]: {:X}", index, (size_t) cmdList);
+        _uiCommandList[index] = cmdList;
     }
 }
 
