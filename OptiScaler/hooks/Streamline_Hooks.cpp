@@ -330,8 +330,8 @@ bool StreamlineHooks::hkdlssg_slOnPluginLoad(void* params, const char* loaderJSO
     static std::string config;
 
     bool skipArchSpoof =
-        Config::Instance()->StreamlineSpoofing.value_or_default() &&
-        (Config::Instance()->FGInput != FGInput::Nukems || Config::Instance()->FGInput != FGInput::DLSSG);
+        !(Config::Instance()->StreamlineSpoofing.value_or_default() &&
+          (Config::Instance()->FGInput == FGInput::Nukems || Config::Instance()->FGInput == FGInput::DLSSG));
 
     if (skipArchSpoof)
         setSystemCapsArch((sl::param::IParameters*) params, 0);

@@ -68,18 +68,18 @@ bool Config::Reload(std::filesystem::path iniPath)
 
                 if (FGPreset.value_or_default() == FGPreset::NoFG)
                 {
-                    FGInput.set_from_config(FGInput::NoFG);
-                    FGOutput.set_from_config(FGOutput::NoFG);
+                    FGInput.set_volatile_value(FGInput::NoFG);
+                    FGOutput.set_volatile_value(FGOutput::NoFG);
                 }
                 else if (FGPreset.value_or_default() == FGPreset::OptiFG)
                 {
-                    FGInput.set_from_config(FGInput::Upscaler);
-                    FGOutput.set_from_config(FGOutput::FSRFG);
+                    FGInput.set_volatile_value(FGInput::Upscaler);
+                    FGOutput.set_volatile_value(FGOutput::FSRFG);
                 }
                 else if (FGPreset.value_or_default() == FGPreset::Nukems)
                 {
-                    FGInput.set_from_config(FGInput::Nukems);
-                    FGOutput.set_from_config(FGOutput::Nukems);
+                    FGInput.set_volatile_value(FGInput::Nukems);
+                    FGOutput.set_volatile_value(FGOutput::Nukems);
                 }
             }
             else
