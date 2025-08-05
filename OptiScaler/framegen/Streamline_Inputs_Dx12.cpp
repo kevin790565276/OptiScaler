@@ -99,12 +99,12 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
     if (fgOutput == nullptr || !Config::Instance()->FGEnabled.value_or_default())
         return false;
 
-    if (allRequiredSent)
+    if (dispatched)
     {
         if (!(State::Instance().gameQuirks & GameQuirk::SetConstantsMarksNewFrame))
             fgOutput->StartNewFrame();
 
-        allRequiredSent = false;
+        dispatched = false;
     }
 
     // Can cause unforeseen consequences
@@ -162,8 +162,6 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         auto mvResource = (ID3D12Resource*) tag.resource->native;
 
-        auto fg = reinterpret_cast<IFGFeature_Dx12*>(State::Instance().currentFG);
-
         const auto copy = alwaysCopy ? true : tag.lifecycle == sl::eOnlyValidNow;
         Config::Instance()->FGMakeMVCopy.set_volatile_value(copy);
 
@@ -173,13 +171,11 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
     {
         LOG_TRACE("UIColorAndAlpha lifecycle: {}", magic_enum::enum_name(tag.lifecycle));
 
-        uiSent = true;
+        // uiSent = true;
 
         ResTrack_Dx12::SetUICmdList(cmdBuffer);
 
         auto uiResource = (ID3D12Resource*) tag.resource->native;
-
-        auto fg = reinterpret_cast<IFGFeature_Dx12*>(State::Instance().currentFG);
 
         const auto copy = alwaysCopy ? true : tag.lifecycle == sl::eOnlyValidNow;
         fgOutput->SetUI(cmdBuffer, uiResource, (D3D12_RESOURCE_STATES) tag.resource->state, copy);
@@ -192,9 +188,34 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
             uiRequired = true;
         }
     }
+    else if (tag.type == sl::kBufferTypeBidirectionalDistortionField)
+    {
+        LOG_TRACE("DistortionField lifecycle: {}", magic_enum::enum_name(tag.lifecycle));
+
+        // distortionFieldSent = true;
+
+        ResTrack_Dx12::SetUICmdList(cmdBuffer); // TODO: add a new one for DistortionField
+
+        auto distortionFieldResource = (ID3D12Resource*) tag.resource->native;
+
+        const auto copy = alwaysCopy ? true : tag.lifecycle == sl::eOnlyValidNow;
+        fgOutput->SetDistortionField(cmdBuffer, distortionFieldResource, (D3D12_RESOURCE_STATES) tag.resource->state,
+                                     copy);
+
+        // Assumes that the game won't stop sending it once it starts.
+        // dispatchFG will stop getting called if this assumption is not true
+        // if (!distortionFieldRequired)
+        //{
+        //    distortionFieldSent = false;
+        //    distortionFieldRequired = true;
+        //}
+    }
 
     // Will trigger frame count update on the next call to reportResource
-    allRequiredSent = hudlessSent && depthSent && mvsSent && (uiRequired && uiSent || !uiRequired);
+    allRequiredSent =
+        hudlessSent && depthSent && mvsSent /* && (uiRequired && uiSent || !uiRequired) && (distortionFieldRequired &&
+                                               distortionFieldSent || !distortionFieldRequired) */
+        ;
 
     // if (allRequiredSent)
     //     State::Instance().slFGInputs.dispatchFG((ID3D12GraphicsCommandList*) cmdBuffer);
@@ -207,7 +228,10 @@ bool Sl_Inputs_Dx12::dispatchFG(ID3D12GraphicsCommandList* cmdBuffer)
     depthSent = false;
     hudlessSent = false;
     mvsSent = false;
-    uiSent = false;
+    // uiSent = false;
+    // distortionFieldSent = false;
+
+    dispatched = true;
 
     auto fgOutput = reinterpret_cast<IFGFeature_Dx12*>(State::Instance().currentFG);
 

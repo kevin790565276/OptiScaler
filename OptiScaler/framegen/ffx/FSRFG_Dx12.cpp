@@ -79,8 +79,22 @@ bool FSRFG_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, bool useHudless, d
 
     _noHudless[fIndex] = !useHudless;
 
+    ffxConfigureDescFrameGenerationRegisterDistortionFieldResource distortionFieldDesc {};
+    distortionFieldDesc.header.type = FFX_API_CONFIGURE_DESC_TYPE_FRAMEGENERATION_REGISTERDISTORTIONRESOURCE;
+
     ffxConfigureDescFrameGeneration m_FrameGenerationConfig = {};
     m_FrameGenerationConfig.header.type = FFX_API_CONFIGURE_DESC_TYPE_FRAMEGENERATION;
+
+    if (_paramDistortionField[fIndex].resource != nullptr)
+    {
+        LOG_TRACE("Using Distortion Field: {:X}", (size_t) _paramDistortionField[fIndex].resource);
+
+        distortionFieldDesc.distortionField = ffxApiGetResourceDX12(_paramDistortionField[fIndex].resource,
+                                                                    _paramDistortionField[fIndex].getFfxApiState());
+        _paramDistortionField[fIndex] = {};
+
+        m_FrameGenerationConfig.header.pNext = &distortionFieldDesc.header;
+    }
 
     if (useHudless && _paramHudless[fIndex].resource != nullptr)
     {
@@ -264,6 +278,7 @@ bool FSRFG_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, bool useHudless, d
     _depthReady[fIndex] = false;
     _hudlessReady[fIndex] = false;
     _uiReady[fIndex] = false;
+    _distortionFieldReady[fIndex] = false;
 
     return retCode == FFX_API_RETURN_OK;
 }

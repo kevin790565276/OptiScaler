@@ -15,8 +15,12 @@ class Sl_Inputs_Dx12
     bool mvsSent = false;
     bool uiSent = false;
     bool uiRequired = false;
+    bool distortionFieldSent = false;
+    bool distortionFieldRequired = false;
 
     bool allRequiredSent = false;
+
+    bool dispatched = false;
 
   public:
     bool setConstants(const sl::Constants& constants);

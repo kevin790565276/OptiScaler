@@ -17,6 +17,7 @@ sl::RenderAPI StreamlineHooks::renderApi = sl::RenderAPI::eCount;
 // interposer
 decltype(&slInit) StreamlineHooks::o_slInit = nullptr;
 decltype(&slSetTag) StreamlineHooks::o_slSetTag = nullptr;
+decltype(&slSetTagForFrame) StreamlineHooks::o_slSetTagForFrame = nullptr;
 decltype(&slEvaluateFeature) StreamlineHooks::o_slEvaluateFeature = nullptr;
 decltype(&slAllocateResources) StreamlineHooks::o_slAllocateResources = nullptr;
 decltype(&slSetConstants) StreamlineHooks::o_slSetConstants = nullptr;
@@ -110,7 +111,6 @@ sl::Result StreamlineHooks::hkslInit(sl::Preferences* pref, uint64_t sdkVersion)
     return o_slInit(*pref, sdkVersion);
 }
 
-// TODO: add support for slSetTagForFrame
 sl::Result StreamlineHooks::hkslSetTag(sl::ViewportHandle& viewport, sl::ResourceTag* tags, uint32_t numTags,
                                        sl::CommandBuffer* cmdBuffer)
 {
@@ -135,12 +135,43 @@ sl::Result StreamlineHooks::hkslSetTag(sl::ViewportHandle& viewport, sl::Resourc
         if (State::Instance().activeFgInput == FGInput::DLSSG &&
             (tags[i].type == sl::kBufferTypeHUDLessColor || tags[i].type == sl::kBufferTypeDepth ||
              tags[i].type == sl::kBufferTypeHiResDepth || tags[i].type == sl::kBufferTypeLinearDepth ||
-             tags[i].type == sl::kBufferTypeMotionVectors || tags[i].type == sl::kBufferTypeUIColorAndAlpha))
+             tags[i].type == sl::kBufferTypeMotionVectors || tags[i].type == sl::kBufferTypeUIColorAndAlpha ||
+             tags[i].type == sl::kBufferTypeBidirectionalDistortionField))
         {
             State::Instance().slFGInputs.reportResource(tags[i], (ID3D12GraphicsCommandList*) cmdBuffer);
         }
     }
+
     auto result = o_slSetTag(viewport, tags, numTags, cmdBuffer);
+    return result;
+}
+
+// TODO: synchronize hkslSetTagForFrame and hkslSetConstants
+sl::Result StreamlineHooks::hkslSetTagForFrame(const sl::FrameToken& frame, const sl::ViewportHandle& viewport,
+                                               const sl::ResourceTag* resources, uint32_t numResources,
+                                               sl::CommandBuffer* cmdBuffer)
+{
+    if (renderApi != sl::RenderAPI::eD3D12)
+    {
+        LOG_ERROR("hkslSetTagForFrame only supports DX12");
+        return o_slSetTagForFrame(frame, viewport, resources, numResources, cmdBuffer);
+    }
+
+    for (uint32_t i = 0; i < numResources; i++)
+    {
+        LOG_TRACE("Resource type: {}, frame id: {}", resources[i].type, (uint32_t) frame);
+
+        if (State::Instance().activeFgInput == FGInput::DLSSG &&
+            (resources[i].type == sl::kBufferTypeHUDLessColor || resources[i].type == sl::kBufferTypeDepth ||
+             resources[i].type == sl::kBufferTypeHiResDepth || resources[i].type == sl::kBufferTypeLinearDepth ||
+             resources[i].type == sl::kBufferTypeMotionVectors || resources[i].type == sl::kBufferTypeUIColorAndAlpha ||
+             resources[i].type == sl::kBufferTypeBidirectionalDistortionField))
+        {
+            State::Instance().slFGInputs.reportResource(resources[i], (ID3D12GraphicsCommandList*) cmdBuffer);
+        }
+    }
+
+    auto result = o_slSetTagForFrame(frame, viewport, resources, numResources, cmdBuffer);
     return result;
 }
 
@@ -685,6 +716,8 @@ void StreamlineHooks::hookInterposer(HMODULE slInterposer)
         {
             o_slSetTag =
                 reinterpret_cast<decltype(&slSetTag)>(KernelBaseProxy::GetProcAddress_()(slInterposer, "slSetTag"));
+            o_slSetTagForFrame = reinterpret_cast<decltype(&slSetTagForFrame)>(
+                KernelBaseProxy::GetProcAddress_()(slInterposer, "slSetTagForFrame"));
             o_slInit = reinterpret_cast<decltype(&slInit)>(KernelBaseProxy::GetProcAddress_()(slInterposer, "slInit"));
             o_slEvaluateFeature = reinterpret_cast<decltype(&slEvaluateFeature)>(
                 KernelBaseProxy::GetProcAddress_()(slInterposer, "slEvaluateFeature"));
@@ -703,11 +736,16 @@ void StreamlineHooks::hookInterposer(HMODULE slInterposer)
                 DetourTransactionBegin();
                 DetourUpdateThread(GetCurrentThread());
 
-                if (o_slSetTag != nullptr && (Config::Instance()->FGInput.value_or_default() == FGInput::Nukems ||
-                                              Config::Instance()->FGInput.value_or_default() == FGInput::DLSSG))
+                DetourAttach(&(PVOID&) o_slInit, hkslInit);
+
+                bool hookSetTag = (Config::Instance()->FGInput.value_or_default() == FGInput::Nukems ||
+                                   Config::Instance()->FGInput.value_or_default() == FGInput::DLSSG);
+
+                if (o_slSetTag != nullptr && hookSetTag)
                     DetourAttach(&(PVOID&) o_slSetTag, hkslSetTag);
 
-                DetourAttach(&(PVOID&) o_slInit, hkslInit);
+                if (o_slSetTagForFrame != nullptr && hookSetTag)
+                    DetourAttach(&(PVOID&) o_slSetTagForFrame, hkslSetTagForFrame);
 
                 if (o_slEvaluateFeature != nullptr)
                     DetourAttach(&(PVOID&) o_slEvaluateFeature, hkslEvaluateFeature);

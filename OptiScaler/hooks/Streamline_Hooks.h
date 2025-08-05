@@ -42,6 +42,7 @@ class StreamlineHooks
     // Interposer
     static decltype(&slInit) o_slInit;
     static decltype(&slSetTag) o_slSetTag;
+    static decltype(&slSetTagForFrame) o_slSetTagForFrame;
     static decltype(&slEvaluateFeature) o_slEvaluateFeature;
     static decltype(&slAllocateResources) o_slAllocateResources;
     static decltype(&slSetConstants) o_slSetConstants;
@@ -57,6 +58,10 @@ class StreamlineHooks
     static bool hkslInit_sl1(sl1::Preferences* pref, int applicationId);
     static sl::Result hkslSetTag(sl::ViewportHandle& viewport, sl::ResourceTag* tags, uint32_t numTags,
                                  sl::CommandBuffer* cmdBuffer);
+
+    static sl::Result hkslSetTagForFrame(const sl::FrameToken& frame, const sl::ViewportHandle& viewport,
+                                         const sl::ResourceTag* resources, uint32_t numResources,
+                                         sl::CommandBuffer* cmdBuffer);
 
     static sl::Result hkslEvaluateFeature(sl::Feature feature, const sl::FrameToken& frame,
                                           const sl::BaseStructure** inputs, uint32_t numInputs,

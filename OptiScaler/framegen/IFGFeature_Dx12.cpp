@@ -325,6 +325,36 @@ void IFGFeature_Dx12::SetUI(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* 
     }
 }
 
+void IFGFeature_Dx12::SetDistortionField(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* distortionField,
+                                         D3D12_RESOURCE_STATES state, bool makeCopy)
+{
+    auto index = GetIndex();
+    LOG_TRACE("Setting distortionField, index: {}, Resource: {:X}, CmdList: {:X}", index, (size_t) distortionField,
+              (size_t) cmdList);
+
+    distortionField->SetName(std::format(L"DistortionFieldResource_{}", index).c_str());
+
+    if (cmdList == nullptr || !makeCopy)
+    {
+        _paramDistortionField[index].resource = distortionField;
+        _paramDistortionField[index].setState(state);
+        return;
+    }
+
+    if (makeCopy && CopyResource(cmdList, distortionField, &_paramDistortionFieldCopy[index].resource, state))
+    {
+        _paramDistortionField[index].resource = _paramDistortionFieldCopy[index].resource;
+        _paramDistortionField[index].setState(D3D12_RESOURCE_STATE_COPY_DEST);
+        _paramDistortionFieldCopy[index].resource->SetName(
+            std::format(L"DistortionFieldCopyResource_{}", index).c_str());
+    }
+    else
+    {
+        _paramDistortionField[index].resource = distortionField;
+        _paramDistortionField[index].setState(state);
+    }
+}
+
 void IFGFeature_Dx12::CreateObjects(ID3D12Device* InDevice)
 {
     _device = InDevice;
