@@ -15,6 +15,7 @@ void fakenvapi::Init(PFN_NvApi_QueryInterface& queryInterface)
     Fake_InformPresentFG = static_cast<decltype(Fake_InformPresentFG)>(queryInterface(GET_ID(Fake_InformPresentFG)));
     Fake_GetAntiLagCtx = static_cast<decltype(Fake_GetAntiLagCtx)>(queryInterface(GET_ID(Fake_GetAntiLagCtx)));
     Fake_GetLowLatencyCtx = static_cast<decltype(Fake_GetLowLatencyCtx)>(queryInterface(GET_ID(Fake_GetLowLatencyCtx)));
+    Fake_SetLowLatencyCtx = static_cast<decltype(Fake_SetLowLatencyCtx)>(queryInterface(GET_ID(Fake_SetLowLatencyCtx)));
 
     if (Fake_InformFGState != nullptr)
         LOG_DEBUG("Got InformFGState");
@@ -27,6 +28,9 @@ void fakenvapi::Init(PFN_NvApi_QueryInterface& queryInterface)
 
     if (Fake_GetLowLatencyCtx != nullptr)
         LOG_DEBUG("Got GetLowLatencyCtx");
+
+    if (Fake_SetLowLatencyCtx != nullptr)
+        LOG_DEBUG("Got SetLowLatencyCtx");
 
     _inited = Fake_InformFGState || Fake_InformPresentFG;
 

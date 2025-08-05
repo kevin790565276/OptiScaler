@@ -16,6 +16,7 @@ class fakenvapi
     inline static decltype(&Fake_InformPresentFG) Fake_InformPresentFG = nullptr;
     inline static decltype(&Fake_GetAntiLagCtx) Fake_GetAntiLagCtx = nullptr;
     inline static decltype(&Fake_GetLowLatencyCtx) Fake_GetLowLatencyCtx = nullptr;
+    inline static decltype(&Fake_SetLowLatencyCtx) Fake_SetLowLatencyCtx = nullptr;
 
     inline static bool _inited = false;
     static void* _lowLatencyContext;
