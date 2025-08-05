@@ -1569,7 +1569,9 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D12_EvaluateFeature(ID3D12GraphicsCom
         {
             fg->StartNewFrame();
 
-            fg->SetCameraValues(cameraNear, cameraFar, cameraVFov, meterFactor);
+            auto aspectRatio =
+                (float) deviceContext->feature->DisplayWidth() / (float) deviceContext->feature->DisplayHeight();
+            fg->SetCameraValues(cameraNear, cameraFar, cameraVFov, aspectRatio, meterFactor);
             fg->SetFrameTimeDelta(State::Instance().lastFrameTime);
             fg->SetMVScale(mvScaleX, mvScaleY);
             fg->SetReset(reset);

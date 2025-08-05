@@ -47,11 +47,12 @@ void IFGFeature::SetMVScale(float x, float y, bool multiplyByResolution)
     _mvScaleMultiplyByResolution = multiplyByResolution;
 }
 
-void IFGFeature::SetCameraValues(float nearValue, float farValue, float vFov, float meterFactor)
+void IFGFeature::SetCameraValues(float nearValue, float farValue, float vFov, float aspectRatio, float meterFactor)
 {
     _cameraFar = farValue;
     _cameraNear = nearValue;
     _cameraVFov = vFov;
+    _cameraAspectRatio = aspectRatio;
     _meterFactor = meterFactor;
 }
 

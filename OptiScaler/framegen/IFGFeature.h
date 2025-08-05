@@ -37,6 +37,7 @@ class IFGFeature
     float _cameraNear = 0.0;
     float _cameraFar = 0.0;
     float _cameraVFov = 0.0;
+    float _cameraAspectRatio = 0.0;
     float _cameraPosition[3] {}; ///< The camera position in world space
     float _cameraUp[3] {};       ///< The camera up normalized vector in world space.
     float _cameraRight[3] {};    ///< The camera right normalized vector in world space.
@@ -85,7 +86,7 @@ class IFGFeature
 
     void SetJitter(float x, float y);
     void SetMVScale(float x, float y, bool multiplyByResolution = false);
-    void SetCameraValues(float nearValue, float farValue, float vFov, float meterFactor = 0.0f);
+    void SetCameraValues(float nearValue, float farValue, float vFov, float aspectRatio, float meterFactor = 0.0f);
     void SetCameraData(float cameraPosition[3], float cameraUp[3], float cameraRight[3], float cameraForward[3]);
     void SetFrameTimeDelta(float delta);
     void SetReset(UINT reset);

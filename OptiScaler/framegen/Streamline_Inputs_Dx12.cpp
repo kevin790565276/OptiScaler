@@ -295,7 +295,7 @@ bool Sl_Inputs_Dx12::dispatchFG(ID3D12GraphicsCommandList* cmdBuffer)
     LOG_TRACE("Post camera recalc near: {}, far: {}", slConstants.value().cameraNear, slConstants.value().cameraFar);
 
     fgOutput->SetCameraValues(slConstants.value().cameraNear, slConstants.value().cameraFar,
-                              slConstants.value().cameraFOV, 0.0f);
+                              slConstants.value().cameraFOV, slConstants.value().cameraAspectRatio, 0.0f);
 
     fgOutput->SetJitter(slConstants.value().jitterOffset.x, slConstants.value().jitterOffset.y);
 
