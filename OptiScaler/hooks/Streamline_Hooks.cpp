@@ -138,7 +138,7 @@ sl::Result StreamlineHooks::hkslSetTag(sl::ViewportHandle& viewport, sl::Resourc
              tags[i].type == sl::kBufferTypeMotionVectors || tags[i].type == sl::kBufferTypeUIColorAndAlpha ||
              tags[i].type == sl::kBufferTypeBidirectionalDistortionField))
         {
-            State::Instance().slFGInputs.reportResource(tags[i], (ID3D12GraphicsCommandList*) cmdBuffer);
+            State::Instance().slFGInputs.reportResource(tags[i], (ID3D12GraphicsCommandList*) cmdBuffer, 0);
         }
     }
 
@@ -146,7 +146,6 @@ sl::Result StreamlineHooks::hkslSetTag(sl::ViewportHandle& viewport, sl::Resourc
     return result;
 }
 
-// TODO: synchronize hkslSetTagForFrame and hkslSetConstants
 sl::Result StreamlineHooks::hkslSetTagForFrame(const sl::FrameToken& frame, const sl::ViewportHandle& viewport,
                                                const sl::ResourceTag* resources, uint32_t numResources,
                                                sl::CommandBuffer* cmdBuffer)
@@ -159,15 +158,14 @@ sl::Result StreamlineHooks::hkslSetTagForFrame(const sl::FrameToken& frame, cons
 
     for (uint32_t i = 0; i < numResources; i++)
     {
-        LOG_TRACE("Resource type: {}, frame id: {}", resources[i].type, (uint32_t) frame);
-
         if (State::Instance().activeFgInput == FGInput::DLSSG &&
             (resources[i].type == sl::kBufferTypeHUDLessColor || resources[i].type == sl::kBufferTypeDepth ||
              resources[i].type == sl::kBufferTypeHiResDepth || resources[i].type == sl::kBufferTypeLinearDepth ||
              resources[i].type == sl::kBufferTypeMotionVectors || resources[i].type == sl::kBufferTypeUIColorAndAlpha ||
              resources[i].type == sl::kBufferTypeBidirectionalDistortionField))
         {
-            State::Instance().slFGInputs.reportResource(resources[i], (ID3D12GraphicsCommandList*) cmdBuffer);
+            State::Instance().slFGInputs.reportResource(resources[i], (ID3D12GraphicsCommandList*) cmdBuffer,
+                                                        (uint32_t) frame);
         }
     }
 
@@ -402,7 +400,7 @@ sl::Result StreamlineHooks::hkslSetConstants(const sl::Constants& values, const 
 
     LOG_TRACE("called with frameIndex: {}", frameIndex);
 
-    State::Instance().slFGInputs.setConstants(values);
+    State::Instance().slFGInputs.setConstants(values, (uint32_t) frame);
 
     // With sl that's the best "fg starts soon-ish" we get
     auto fg = State::Instance().currentFG;

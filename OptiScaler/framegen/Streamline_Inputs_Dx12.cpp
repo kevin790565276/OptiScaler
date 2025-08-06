@@ -1,25 +1,35 @@
 #include "Streamline_Inputs_Dx12.h"
-#include "IFGFeature_Dx12.h"
 #include <Config.h>
 #include <resource_tracking/ResTrack_dx12.h>
 #include <magic_enum.hpp>
 
-bool Sl_Inputs_Dx12::setConstants(const sl::Constants& values)
+std::optional<sl::Constants>* Sl_Inputs_Dx12::getFrameData(IFGFeature_Dx12* fgOutput)
+{
+    auto frameId = indexToFrameIdMapping[fgOutput->GetIndex()];
+    return &slConstants[frameId % BUFFER_COUNT];
+}
+
+bool Sl_Inputs_Dx12::setConstants(const sl::Constants& values, uint32_t frameId)
 {
     auto fgOutput = reinterpret_cast<IFGFeature_Dx12*>(State::Instance().currentFG);
 
     if (fgOutput == nullptr)
         return false;
 
-    slConstants = sl::Constants {};
+    auto index = frameBasedTracking ? frameId % BUFFER_COUNT : 0;
+    auto& data = slConstants[index];
 
-    if (slConstants.has_value() && values.structVersion == slConstants.value().structVersion)
+    LOG_DEBUG("Setting consts for streamline index: {}", index);
+
+    data = sl::Constants {};
+
+    if (data.has_value() && values.structVersion == data.value().structVersion)
     {
-        slConstants = values;
+        data = values;
         return true;
     }
 
-    slConstants.reset();
+    data.reset();
 
     LOG_ERROR("Wrong constant struct version");
 
@@ -33,11 +43,14 @@ bool Sl_Inputs_Dx12::evaluateState(ID3D12Device* device)
     if (fgOutput == nullptr)
         return false;
 
-    if (!slConstants.has_value())
+    auto data = getFrameData(fgOutput);
+    if (!data->has_value())
     {
         LOG_WARN("Called without constants being set");
         return false;
     }
+
+    auto& slConstsRef = data->value();
 
     static UINT64 lastFrameCount = 0;
     static UINT64 repeatsInRow = 0;
@@ -68,13 +81,13 @@ bool Sl_Inputs_Dx12::evaluateState(ID3D12Device* device)
     // if ()
     //     fgConstants.flags |= FG_Flags::Hdr;
 
-    if (slConstants.value().depthInverted)
+    if (slConstsRef.depthInverted)
         fgConstants.flags |= FG_Flags::InvertedDepth;
 
-    if (slConstants.value().motionVectorsJittered)
+    if (slConstsRef.motionVectorsJittered)
         fgConstants.flags |= FG_Flags::JitteredMVs;
 
-    if (slConstants.value().motionVectorsDilated)
+    if (slConstsRef.motionVectorsDilated)
         fgConstants.flags |= FG_Flags::DisplayResolutionMVs;
 
     if (Config::Instance()->FGAsync.value_or_default())
@@ -88,7 +101,7 @@ bool Sl_Inputs_Dx12::evaluateState(ID3D12Device* device)
     return true;
 }
 
-bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCommandList* cmdBuffer)
+bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCommandList* cmdBuffer, uint32_t frameId)
 {
     if (!cmdBuffer)
         LOG_ERROR("cmdBuffer is null");
@@ -105,6 +118,9 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
             fgOutput->StartNewFrame();
 
         dispatched = false;
+
+        frameBasedTracking = frameId != 0;
+        indexToFrameIdMapping[fgOutput->GetIndex()] = frameId;
     }
 
     // Can cause unforeseen consequences
@@ -234,12 +250,16 @@ bool Sl_Inputs_Dx12::dispatchFG(ID3D12GraphicsCommandList* cmdBuffer)
     dispatched = true;
 
     auto fgOutput = reinterpret_cast<IFGFeature_Dx12*>(State::Instance().currentFG);
-
     if (fgOutput == nullptr)
         return false;
 
-    if (!slConstants.has_value())
+    auto data = getFrameData(fgOutput);
+    if (!data->has_value())
         return false;
+
+    auto& slConstsRef = data->value();
+
+    LOG_DEBUG("Using consts for streamline index: {}", indexToFrameIdMapping[fgOutput->GetIndex()] % BUFFER_COUNT);
 
     if (State::Instance().FGchanged)
         return false;
@@ -250,11 +270,11 @@ bool Sl_Inputs_Dx12::dispatchFG(ID3D12GraphicsCommandList* cmdBuffer)
     // Nukem's function, licensed under GPLv3
     auto loadCameraMatrix = [&]()
     {
-        if (slConstants.value().orthographicProjection)
+        if (data->value().orthographicProjection)
             return false;
 
         float projMatrix[4][4];
-        memcpy(projMatrix, (void*) &slConstants.value().cameraViewToClip, sizeof(projMatrix));
+        memcpy(projMatrix, (void*) &slConstsRef.cameraViewToClip, sizeof(projMatrix));
 
         // BUG: Various RTX Remix-based games pass in an identity matrix which is completely useless. No
         // idea why.
@@ -282,23 +302,23 @@ bool Sl_Inputs_Dx12::dispatchFG(ID3D12GraphicsCommandList* cmdBuffer)
 
         if (e < 0.0)
         {
-            slConstants.value().cameraNear = static_cast<float>((c == 0.0) ? 0.0 : (d / c));
-            slConstants.value().cameraFar = static_cast<float>(d / (c + 1.0));
+            slConstsRef.cameraNear = static_cast<float>((c == 0.0) ? 0.0 : (d / c));
+            slConstsRef.cameraFar = static_cast<float>(d / (c + 1.0));
         }
         else
         {
-            slConstants.value().cameraNear = static_cast<float>((c == 0.0) ? 0.0 : (-d / c));
-            slConstants.value().cameraFar = static_cast<float>(-d / (c - 1.0));
+            slConstsRef.cameraNear = static_cast<float>((c == 0.0) ? 0.0 : (-d / c));
+            slConstsRef.cameraFar = static_cast<float>(-d / (c - 1.0));
         }
 
-        if (slConstants.value().depthInverted)
-            std::swap(slConstants.value().cameraNear, slConstants.value().cameraFar);
+        if (slConstsRef.depthInverted)
+            std::swap(slConstsRef.cameraNear, slConstsRef.cameraFar);
 
-        slConstants.value().cameraFOV = static_cast<float>(2.0 * std::atan(1.0 / b));
+        slConstsRef.cameraFOV = static_cast<float>(2.0 * std::atan(1.0 / b));
         return true;
     };
 
-    LOG_TRACE("Pre camera recalc near: {}, far: {}", slConstants.value().cameraNear, slConstants.value().cameraFar);
+    LOG_TRACE("Pre camera recalc near: {}, far: {}", slConstsRef.cameraNear, slConstsRef.cameraFar);
 
     // UE seems to not be passing the correct cameraViewToClip
     // and we can't use it to calculate cameraNear and cameraFar.
@@ -306,35 +326,35 @@ bool Sl_Inputs_Dx12::dispatchFG(ID3D12GraphicsCommandList* cmdBuffer)
         loadCameraMatrix();
 
     infiniteDepth = false;
-    if (slConstants.value().cameraNear != 0.0f && slConstants.value().cameraFar == 0.0f)
+    if (slConstsRef.cameraNear != 0.0f && slConstsRef.cameraFar == 0.0f)
     {
         // A CameraFar value of zero indicates an infinite far plane. Due to a bug in FSR's
         // setupDeviceDepthToViewSpaceDepthParams function, CameraFar must always be greater than
         // CameraNear when in use.
 
         infiniteDepth = true;
-        slConstants.value().cameraFar = slConstants.value().cameraNear + 1.0f;
+        slConstsRef.cameraFar = slConstsRef.cameraNear + 1.0f;
     }
 
-    LOG_TRACE("Post camera recalc near: {}, far: {}", slConstants.value().cameraNear, slConstants.value().cameraFar);
+    LOG_TRACE("Post camera recalc near: {}, far: {}", slConstsRef.cameraNear, slConstsRef.cameraFar);
 
-    fgOutput->SetCameraValues(slConstants.value().cameraNear, slConstants.value().cameraFar,
-                              slConstants.value().cameraFOV, slConstants.value().cameraAspectRatio, 0.0f);
+    fgOutput->SetCameraValues(slConstsRef.cameraNear, slConstsRef.cameraFar, slConstsRef.cameraFOV,
+                              slConstsRef.cameraAspectRatio, 0.0f);
 
-    fgOutput->SetJitter(slConstants.value().jitterOffset.x, slConstants.value().jitterOffset.y);
+    fgOutput->SetJitter(slConstsRef.jitterOffset.x, slConstsRef.jitterOffset.y);
 
     // Streamline is not 100% clear on if we should multiply by resolution or not.
     // But UE games and Dead Rising expect that multiplication to be done, even if the scale is 1.0.
-    // bool multiplyByResolution = slConstants.value().mvecScale.x != 1.f || slConstants.value().mvecScale.y != 1.f;
+    // bool multiplyByResolution = dataCopy.mvecScale.x != 1.f || dataCopy.mvecScale.y
+    // != 1.f;
     bool multiplyByResolution = true;
-    fgOutput->SetMVScale(slConstants.value().mvecScale.x, slConstants.value().mvecScale.y, multiplyByResolution);
+    fgOutput->SetMVScale(slConstsRef.mvecScale.x, slConstsRef.mvecScale.y, multiplyByResolution);
 
-    fgOutput->SetCameraData(reinterpret_cast<float*>(&slConstants.value().cameraPos),
-                            reinterpret_cast<float*>(&slConstants.value().cameraUp),
-                            reinterpret_cast<float*>(&slConstants.value().cameraRight),
-                            reinterpret_cast<float*>(&slConstants.value().cameraFwd));
+    fgOutput->SetCameraData(
+        reinterpret_cast<float*>(&slConstsRef.cameraPos), reinterpret_cast<float*>(&slConstsRef.cameraUp),
+        reinterpret_cast<float*>(&slConstsRef.cameraRight), reinterpret_cast<float*>(&slConstsRef.cameraFwd));
 
-    fgOutput->SetReset(slConstants.value().reset == sl::Boolean::eTrue);
+    fgOutput->SetReset(slConstsRef.reset == sl::Boolean::eTrue);
 
     return fgOutput->Dispatch(cmdBuffer, true, State::Instance().lastFrameTime);
 }
