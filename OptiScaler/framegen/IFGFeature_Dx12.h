@@ -62,13 +62,13 @@ class IFGFeature_Dx12 : public virtual IFGFeature
     ID3D12CommandQueue* _gameCommandQueue = nullptr;
     HWND _hwnd = NULL;
 
-    bool _velocityReady[BUFFER_COUNT] = { false, false, false, false };
-    bool _depthReady[BUFFER_COUNT] = { false, false, false, false };
-    bool _hudlessReady[BUFFER_COUNT] = { false, false, false, false };
-    bool _uiReady[BUFFER_COUNT] = { false, false, false, false };
-    bool _distortionFieldReady[BUFFER_COUNT] = { false, false, false, false };
-    bool _hudlessDispatchReady[BUFFER_COUNT] = { false, false, false, false };
-    bool _noHudless[BUFFER_COUNT] = { false, false, false, false };
+    bool _velocityReady[BUFFER_COUNT] {};
+    bool _depthReady[BUFFER_COUNT] {};
+    bool _hudlessReady[BUFFER_COUNT] {};
+    bool _uiReady[BUFFER_COUNT] {};
+    bool _distortionFieldReady[BUFFER_COUNT] {};
+    bool _hudlessDispatchReady[BUFFER_COUNT] {};
+    bool _noHudless[BUFFER_COUNT] {};
 
     Dx12Resource _paramVelocity[BUFFER_COUNT] {};
     Dx12Resource _paramVelocityCopy[BUFFER_COUNT] {};
@@ -81,8 +81,8 @@ class IFGFeature_Dx12 : public virtual IFGFeature
     Dx12Resource _paramDistortionField[BUFFER_COUNT] {};
     Dx12Resource _paramDistortionFieldCopy[BUFFER_COUNT] {};
 
-    ID3D12GraphicsCommandList* _commandList[BUFFER_COUNT] = { nullptr, nullptr, nullptr, nullptr };
-    ID3D12CommandAllocator* _commandAllocators[BUFFER_COUNT] = { nullptr, nullptr, nullptr, nullptr };
+    ID3D12GraphicsCommandList* _commandList[BUFFER_COUNT] {};
+    ID3D12CommandAllocator* _commandAllocators[BUFFER_COUNT] {};
 
     bool CreateBufferResource(ID3D12Device* InDevice, ID3D12Resource* InSource, D3D12_RESOURCE_STATES InState,
                               ID3D12Resource** OutResource, bool UAV = false, bool depth = false);
