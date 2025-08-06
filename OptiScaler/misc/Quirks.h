@@ -32,7 +32,6 @@ enum class GameQuirk : uint64_t
     VulkanDLSSBarrierFixup,
     ForceUnrealEngine,
     NoFSRFGFirstSwapchain,
-    SetConstantsMarksNewFrame,
     // Don't forget to add the new entry to printQuirks
     _
 };
@@ -51,10 +50,8 @@ struct QuirkEntry
 // exeName has to be lowercase
 static const QuirkEntry quirkTable[] = {
     // Red Dead Redemption
-    QUIRK_ENTRY("rdr.exe", GameQuirk::SkipFsr3Method, GameQuirk::SetConstantsMarksNewFrame,
-                GameQuirk::NoFSRFGFirstSwapchain),
-    QUIRK_ENTRY("playrdr.exe", GameQuirk::SkipFsr3Method, GameQuirk::SetConstantsMarksNewFrame,
-                GameQuirk::NoFSRFGFirstSwapchain),
+    QUIRK_ENTRY("rdr.exe", GameQuirk::SkipFsr3Method, GameQuirk::NoFSRFGFirstSwapchain),
+    QUIRK_ENTRY("playrdr.exe", GameQuirk::SkipFsr3Method, GameQuirk::NoFSRFGFirstSwapchain),
 
     // No Man's Sky
     QUIRK_ENTRY("nms.exe", GameQuirk::KernelBaseHooks, GameQuirk::VulkanDLSSBarrierFixup),
@@ -272,8 +269,6 @@ static void printQuirks(flag_set<GameQuirk>& quirks)
         spdlog::info("Quirk: Skipping upscaling for first 10 frames");
     if (quirks & GameQuirk::NoFSRFGFirstSwapchain)
         spdlog::info("Quirk: Skip turning the first swapchain created into an FSR swapchain");
-    if (quirks & GameQuirk::SetConstantsMarksNewFrame)
-        spdlog::info("Quirk: slSetConstants marks new frame");
 
     return;
 }

@@ -114,8 +114,7 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
     if (dispatched)
     {
-        if (!(State::Instance().gameQuirks & GameQuirk::SetConstantsMarksNewFrame))
-            fgOutput->StartNewFrame();
+        fgOutput->StartNewFrame();
 
         dispatched = false;
 
