@@ -1605,7 +1605,7 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D12_EvaluateFeature(ID3D12GraphicsCom
         }
 
         ResTrack_Dx12::SetDepthCmdList(InCmdList);
-        ResTrack_Dx12::SetMVsCmdList(InCmdList);
+        // ResTrack_Dx12::SetMVsCmdList(InCmdList);
         bool allocatorReset = false;
         frameIndex = fg->GetIndex();
 
@@ -1737,11 +1737,7 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D12_EvaluateFeature(ID3D12GraphicsCom
             else
             {
                 LOG_DEBUG("(FG) running, frame: {0}", deviceContext->feature->FrameCount());
-
-                if (fg->Dispatch())
-                {
-                    fg->ExecuteCommandList(State::Instance().currentCommandQueue);
-                }
+                fg->Dispatch();
             }
         }
     }

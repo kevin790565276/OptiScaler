@@ -7,6 +7,7 @@
 #include <future>
 #include <hooks/HooksDx.h>
 #include <hudfix/Hudfix_Dx12.h>
+#include <resource_tracking/ResTrack_dx12.h>
 // #define USE_QUEUE_FOR_FG
 
 typedef struct FfxSwapchainFramePacingTuning
@@ -83,7 +84,7 @@ bool FSRFG_Dx12::Dispatch()
     ffxConfigureDescFrameGeneration m_FrameGenerationConfig = {};
     m_FrameGenerationConfig.header.type = FFX_API_CONFIGURE_DESC_TYPE_FRAMEGENERATION;
 
-    if (_paramDistortionField[fIndex].resource != nullptr)
+    if (!_noDistortionField[fIndex] && _paramDistortionField[fIndex].resource != nullptr)
     {
         LOG_TRACE("Using Distortion Field: {:X}", (size_t) _paramDistortionField[fIndex].resource);
 
@@ -220,6 +221,8 @@ bool FSRFG_Dx12::Dispatch()
             LOG_ERROR("_hudlessCommandList[fIndex]->Reset error: {:X}", (UINT) result);
             return false;
         }
+
+        ResTrack_Dx12::ClearFoundCmdLists();
 
         dfgPrepare.commandList = _commandList[fIndex];
 
@@ -625,8 +628,7 @@ void FSRFG_Dx12::EvaluateState(ID3D12Device* device, FG_Constants& fgConstants)
     }
 
     if (!State::Instance().FGchanged && Config::Instance()->FGEnabled.value_or_default() && !IsPaused() &&
-        FfxApiProxy::InitFfxDx12() && !IsActive() &&
-        HooksDx::CurrentSwapchainFormat() != DXGI_FORMAT_UNKNOWN)
+        FfxApiProxy::InitFfxDx12() && !IsActive() && HooksDx::CurrentSwapchainFormat() != DXGI_FORMAT_UNKNOWN)
     {
         CreateObjects(device);
         CreateContext(device, fgConstants);

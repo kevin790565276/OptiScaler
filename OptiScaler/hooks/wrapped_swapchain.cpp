@@ -232,6 +232,7 @@ HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::Present(UINT SyncInterval, UIN
 HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::GetBuffer(UINT Buffer, REFIID riid, void** ppSurface)
 {
     auto result = m_pReal->GetBuffer(Buffer, riid, ppSurface);
+    // LOG_TRACE("Buffer: {}", Buffer);
     return result;
 }
 
@@ -555,7 +556,9 @@ HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::GetMatrixTransform(DXGI_MATRIX
 
 UINT STDMETHODCALLTYPE WrappedIDXGISwapChain4::GetCurrentBackBufferIndex(void)
 {
-    return m_pReal3->GetCurrentBackBufferIndex();
+    auto index = m_pReal3->GetCurrentBackBufferIndex();
+    // LOG_TRACE("index: {}", index);
+    return index;
 }
 
 HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::CheckColorSpaceSupport(DXGI_COLOR_SPACE_TYPE ColorSpace,

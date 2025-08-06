@@ -59,6 +59,8 @@ class IFGFeature
     bool _distortionFieldReady[BUFFER_COUNT] {};
 
     bool _noHudless[BUFFER_COUNT] = { true, true, true, true };
+    bool _noUi[BUFFER_COUNT] = { true, true, true, true };
+    bool _noDistortionField[BUFFER_COUNT] = { true, true, true, true };
     bool _waitingExecute[BUFFER_COUNT] {};
 
     IID streamlineRiid {};
@@ -85,9 +87,11 @@ class IFGFeature
 
     bool UIReady();
     void SetUIReady();
+    bool UsingUI();
 
     bool DistortionFieldReady();
     void SetDistortionFieldReady();
+    bool UsingDistortionField();
 
     void SetHudlessReady();
     bool HudlessReady();

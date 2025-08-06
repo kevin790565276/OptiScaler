@@ -15,7 +15,11 @@ UINT64 IFGFeature::StartNewFrame()
     _mvsReady[fIndex] = false;
     _uiReady[fIndex] = false;
     _distortionFieldReady[fIndex] = false;
+
     _waitingExecute[fIndex] = false;
+
+    _noUi[fIndex] = true;
+    _noDistortionField[fIndex] = true;
     _noHudless[fIndex] = true;
 
     return _frameCount;
@@ -32,9 +36,11 @@ void IFGFeature::SetMVsReady() { _mvsReady[GetIndex()] = true; }
 
 bool IFGFeature::UIReady() { return _uiReady[GetIndex()]; }
 void IFGFeature::SetUIReady() { _uiReady[GetIndex()] = true; }
+bool IFGFeature::UsingUI() { return !_noUi[GetIndex()]; }
 
 bool IFGFeature::DistortionFieldReady() { return _distortionFieldReady[GetIndex()]; }
 void IFGFeature::SetDistortionFieldReady() { _distortionFieldReady[GetIndex()] = true; }
+bool IFGFeature::UsingDistortionField() { return !_noDistortionField[GetIndex()]; }
 
 bool IFGFeature::HudlessReady() { return _hudlessReady[GetIndex()]; }
 void IFGFeature::SetHudlessReady() { _hudlessReady[GetIndex()] = true; }

@@ -173,7 +173,7 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         mvsSent = true;
 
-        ResTrack_Dx12::SetMVsCmdList(cmdBuffer);
+        // ResTrack_Dx12::SetMVsCmdList(cmdBuffer);
 
         auto mvResource = (ID3D12Resource*) tag.resource->native;
 
@@ -186,25 +186,43 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
     {
         LOG_TRACE("UIColorAndAlpha lifecycle: {}", magic_enum::enum_name(tag.lifecycle));
 
-        ResTrack_Dx12::SetUICmdList(cmdBuffer);
+        uiSent = true;
+
+        // ResTrack_Dx12::SetUICmdList(cmdBuffer);
 
         auto uiResource = (ID3D12Resource*) tag.resource->native;
 
         const auto copy = alwaysCopy ? true : tag.lifecycle == sl::eOnlyValidNow;
         fgOutput->SetUI(cmdBuffer, uiResource, (D3D12_RESOURCE_STATES) tag.resource->state, copy);
+
+        // Assumes that the game won't stop sending it once it starts.
+        // dispatchFG will stop getting called if this assumption is not true
+        if (!uiRequired)
+        {
+            uiSent = false;
+            uiRequired = true;
+        }
     }
     else if (tag.type == sl::kBufferTypeBidirectionalDistortionField)
     {
         LOG_TRACE("DistortionField lifecycle: {}", magic_enum::enum_name(tag.lifecycle));
 
-        ResTrack_Dx12::SetDistortionFieldCmdList(cmdBuffer);
+        distortionFieldSent = true;
+
+        // ResTrack_Dx12::SetDistortionFieldCmdList(cmdBuffer);
 
         auto distortionFieldResource = (ID3D12Resource*) tag.resource->native;
 
         const auto copy = alwaysCopy ? true : tag.lifecycle == sl::eOnlyValidNow;
         fgOutput->SetDistortionField(cmdBuffer, distortionFieldResource, (D3D12_RESOURCE_STATES) tag.resource->state,
                                      copy);
+
+        // TODO: add distortionField required
+        // For example, if skipped dispatch because of field missing for a few frames, reset the requirement
     }
+
+    if (readyForDispatch())
+        dispatchFG(nullptr);
 
     return true;
 }
@@ -214,6 +232,8 @@ bool Sl_Inputs_Dx12::dispatchFG(ID3D12GraphicsCommandList* cmdBuffer)
     depthSent = false;
     hudlessSent = false;
     mvsSent = false;
+    uiSent = false;
+    distortionFieldSent = false;
 
     dispatched = true;
 

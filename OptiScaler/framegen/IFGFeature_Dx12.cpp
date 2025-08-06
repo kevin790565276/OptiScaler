@@ -305,6 +305,8 @@ void IFGFeature_Dx12::SetUI(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* 
     auto index = GetIndex();
     LOG_TRACE("Setting ui, index: {}, Resource: {:X}, CmdList: {:X}", index, (size_t) ui, (size_t) cmdList);
 
+    _noUi[index] = false;
+
     ui->SetName(std::format(L"UiResource_{}", index).c_str());
 
     if (cmdList == nullptr || !makeCopy)
@@ -333,6 +335,8 @@ void IFGFeature_Dx12::SetDistortionField(ID3D12GraphicsCommandList* cmdList, ID3
     auto index = GetIndex();
     LOG_TRACE("Setting distortionField, index: {}, Resource: {:X}, CmdList: {:X}", index, (size_t) distortionField,
               (size_t) cmdList);
+
+    _noDistortionField[index] = false;
 
     distortionField->SetName(std::format(L"DistortionFieldResource_{}", index).c_str());
 

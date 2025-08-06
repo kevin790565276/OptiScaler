@@ -241,7 +241,7 @@ class ResTrack_Dx12
     inline static ID3D12GraphicsCommandList* _depthCommandList[BUFFER_COUNT] {};
     inline static ID3D12GraphicsCommandList* _mvsCommandList[BUFFER_COUNT] {};
     inline static ID3D12GraphicsCommandList* _uiCommandList[BUFFER_COUNT] {};
-    inline static ID3D12GraphicsCommandList* _distortionFieldCommandList[BUFFER_COUNT]{};
+    inline static ID3D12GraphicsCommandList* _distortionFieldCommandList[BUFFER_COUNT] {};
 
     inline static ULONG64 _lastHudlessFrame = 0;
     inline static std::mutex _hudlessMutex;
@@ -330,8 +330,6 @@ class ResTrack_Dx12
     static void HookDevice(ID3D12Device* device);
     static void ClearPossibleHudless();
     static void SetDepthCmdList(ID3D12GraphicsCommandList* cmdList);
-    static void SetMVsCmdList(ID3D12GraphicsCommandList* cmdList);
-    static void SetUICmdList(ID3D12GraphicsCommandList* cmdList);
-    static void SetDistortionFieldCmdList(ID3D12GraphicsCommandList* cmdList);
     static void SetHudlessCmdList(ID3D12GraphicsCommandList* cmdList);
+    static void ClearFoundCmdLists();
 };

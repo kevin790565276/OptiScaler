@@ -15,6 +15,10 @@ class Sl_Inputs_Dx12
     bool depthSent = false;
     bool hudlessSent = false;
     bool mvsSent = false;
+    bool uiSent = false;
+    bool uiRequired = false;
+    bool distortionFieldSent = false;
+    bool distortionFieldRequired = false;
 
     bool dispatched = false;
 
@@ -32,7 +36,11 @@ class Sl_Inputs_Dx12
 
     // A minimum of required inputs
     // If we are missing any by the time of present, then we have have bigger issues
-    bool readyForDispatch() const { return hudlessSent && depthSent && mvsSent; };
+    bool readyForDispatch() const
+    {
+        return hudlessSent && depthSent && mvsSent && (uiRequired && uiSent || !uiRequired) &&
+               (distortionFieldRequired && distortionFieldSent || !distortionFieldRequired);
+    };
 
     // TODO: some shutdown and cleanup methods
 };

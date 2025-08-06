@@ -264,8 +264,8 @@ static HRESULT hkFGPresent(void* This, UINT SyncInterval, UINT Flags)
         LOG_TRACE("Accuired FG->Mutex: {}", fg->Mutex.getOwner());
     }
 
-    if (willPresent && State::Instance().currentCommandQueue != nullptr && State::Instance().activeFgInput == FGInput::Upscaler &&
-        fg != nullptr && fg->IsActive())
+    if (willPresent && State::Instance().currentCommandQueue != nullptr &&
+        State::Instance().activeFgInput == FGInput::Upscaler && fg != nullptr && fg->IsActive())
     {
         if (!fg->IsPaused() && !fg->IsDispatched() && fg->MVsReady() && fg->DepthReady())
         {
@@ -280,12 +280,11 @@ static HRESULT hkFGPresent(void* This, UINT SyncInterval, UINT Flags)
         }
     }
 
-    if (willPresent && State::Instance().activeFgInput == FGInput::DLSSG &&
-        State::Instance().slFGInputs.readyForDispatch() && fg != nullptr)
-    {
-        // fg->Present();
-        State::Instance().slFGInputs.dispatchFG(nullptr);
-    }
+    // if (willPresent && State::Instance().activeFgInput == FGInput::DLSSG &&
+    //     State::Instance().slFGInputs.readyForDispatch() && fg != nullptr)
+    //{
+    //     State::Instance().slFGInputs.dispatchFG(nullptr);
+    // }
 
     if (willPresent && State::Instance().activeFgInput == FGInput::Upscaler)
     {
@@ -299,7 +298,7 @@ static HRESULT hkFGPresent(void* This, UINT SyncInterval, UINT Flags)
 
     Hudfix_Dx12::PresentEnd();
 
-    if (Config::Instance()->FGUseMutexForSwapchain.value_or_default())
+    if (Config::Instance()->FGUseMutexForSwapchain.value_or_default() && fg != nullptr)
     {
         LOG_TRACE("Releasing FG->Mutex: {}", fg->Mutex.getOwner());
         fg->Mutex.unlockThis(2);
