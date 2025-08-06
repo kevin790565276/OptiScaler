@@ -7,8 +7,38 @@ int IFGFeature::GetIndex() { return (_frameCount % BUFFER_COUNT); }
 UINT64 IFGFeature::StartNewFrame()
 {
     LOG_FUNC();
-    return ++_frameCount;
+    _frameCount++;
+    auto fIndex = GetIndex();
+
+    _hudlessReady[fIndex] = false;
+    _depthReady[fIndex] = false;
+    _mvsReady[fIndex] = false;
+    _uiReady[fIndex] = false;
+    _distortionFieldReady[fIndex] = false;
+    _waitingExecute[fIndex] = false;
+    _noHudless[fIndex] = true;
+
+    return _frameCount;
 }
+
+bool IFGFeature::WaitingExecution() { return _waitingExecute[GetIndex()]; }
+void IFGFeature::SetExecuted() { _waitingExecute[GetIndex()] = false; }
+
+bool IFGFeature::DepthReady() { return _depthReady[GetIndex()]; }
+void IFGFeature::SetDepthReady() { _depthReady[GetIndex()] = true; }
+
+bool IFGFeature::MVsReady() { return _mvsReady[GetIndex()]; }
+void IFGFeature::SetMVsReady() { _mvsReady[GetIndex()] = true; }
+
+bool IFGFeature::UIReady() { return _uiReady[GetIndex()]; }
+void IFGFeature::SetUIReady() { _uiReady[GetIndex()] = true; }
+
+bool IFGFeature::DistortionFieldReady() { return _distortionFieldReady[GetIndex()]; }
+void IFGFeature::SetDistortionFieldReady() { _distortionFieldReady[GetIndex()] = true; }
+
+bool IFGFeature::HudlessReady() { return _hudlessReady[GetIndex()]; }
+void IFGFeature::SetHudlessReady() { _hudlessReady[GetIndex()] = true; }
+bool IFGFeature::UsingHudless() { return !_noHudless[GetIndex()]; }
 
 bool IFGFeature::CheckForRealObject(std::string functionName, IUnknown* pObject, IUnknown** ppRealObject)
 {
@@ -33,6 +63,10 @@ bool IFGFeature::CheckForRealObject(std::string functionName, IUnknown* pObject,
 }
 
 bool IFGFeature::IsActive() { return _isActive; }
+
+bool IFGFeature::IsPaused() { return _targetFrame >= _frameCount; }
+
+bool IFGFeature::IsDispatched() { return _lastDispatchedFrame == _frameCount; }
 
 void IFGFeature::SetJitter(float x, float y)
 {

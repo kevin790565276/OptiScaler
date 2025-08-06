@@ -324,5 +324,5 @@ bool Sl_Inputs_Dx12::dispatchFG(ID3D12GraphicsCommandList* cmdBuffer)
 
     fgOutput->SetReset(slConstsRef.reset == sl::Boolean::eTrue);
 
-    return fgOutput->Dispatch(cmdBuffer, true, State::Instance().lastFrameTime);
+    return fgOutput->Dispatch();
 }

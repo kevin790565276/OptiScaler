@@ -52,6 +52,15 @@ class IFGFeature
     bool _isActive = false;
     UINT64 _targetFrame = 0;
 
+    bool _hudlessReady[BUFFER_COUNT] {};
+    bool _depthReady[BUFFER_COUNT] {};
+    bool _mvsReady[BUFFER_COUNT] {};
+    bool _uiReady[BUFFER_COUNT] {};
+    bool _distortionFieldReady[BUFFER_COUNT] {};
+
+    bool _noHudless[BUFFER_COUNT] = { true, true, true, true };
+    bool _waitingExecute[BUFFER_COUNT] {};
+
     IID streamlineRiid {};
 
     bool CheckForRealObject(std::string functionName, IUnknown* pObject, IUnknown** ppRealObject);
@@ -62,29 +71,34 @@ class IFGFeature
     virtual feature_version Version() = 0;
     virtual const char* Name() = 0;
 
-    virtual void Present() = 0;
-
-    virtual void SetVelocityReady() = 0;
-    virtual void SetDepthReady() = 0;
-    virtual void SetHudlessReady() = 0;
-    virtual void SetUIReady() = 0;
-    virtual void SetDistortionFieldReady() = 0;
-    virtual void SetHudlessDispatchReady() = 0;
-
-    virtual bool VelocityReady() = 0;
-    virtual bool DepthReady() = 0;
-    virtual bool UIReady() = 0;
-    virtual bool DistortionFieldReady() = 0;
-    virtual bool HudlessReady() = 0;
-    virtual bool ReadyForExecute() = 0;
-
     virtual void ReleaseObjects() = 0;
     virtual void StopAndDestroyContext(bool destroy, bool shutDown, bool useMutex) = 0;
 
+    int GetIndex();
     UINT64 StartNewFrame();
 
+    bool DepthReady();
+    void SetDepthReady();
+
+    bool MVsReady();
+    void SetMVsReady();
+
+    bool UIReady();
+    void SetUIReady();
+
+    bool DistortionFieldReady();
+    void SetDistortionFieldReady();
+
+    void SetHudlessReady();
+    bool HudlessReady();
+    bool UsingHudless();
+
+    bool WaitingExecution();
+    void SetExecuted();
+
     bool IsActive();
-    int GetIndex();
+    bool IsPaused();
+    bool IsDispatched();
 
     void SetJitter(float x, float y);
     void SetMVScale(float x, float y, bool multiplyByResolution = false);

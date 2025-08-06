@@ -60,8 +60,10 @@ feature_version FSRFG_Dx12::Version()
 
 const char* FSRFG_Dx12::Name() { return "FSR-FG"; }
 
-bool FSRFG_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, bool useHudless, double frameTime)
+bool FSRFG_Dx12::Dispatch()
 {
+    LOG_DEBUG();
+
     if (_fgContext == nullptr)
     {
         LOG_DEBUG("No fg context");
@@ -70,14 +72,10 @@ bool FSRFG_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, bool useHudless, d
 
     _lastDispatchedFrame = _frameCount;
 
-    LOG_DEBUG("useHudless: {}, frameTime: {}", useHudless, frameTime);
-
     if (State::Instance().FSRFGFTPchanged)
         ConfigureFramePaceTuning();
 
     auto fIndex = GetIndex();
-
-    _noHudless[fIndex] = !useHudless;
 
     ffxConfigureDescFrameGenerationRegisterDistortionFieldResource distortionFieldDesc {};
     distortionFieldDesc.header.type = FFX_API_CONFIGURE_DESC_TYPE_FRAMEGENERATION_REGISTERDISTORTIONRESOURCE;
@@ -96,7 +94,7 @@ bool FSRFG_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, bool useHudless, d
         m_FrameGenerationConfig.header.pNext = &distortionFieldDesc.header;
     }
 
-    if (useHudless && _paramHudless[fIndex].resource != nullptr)
+    if (!_noHudless[fIndex] && _paramHudless[fIndex].resource != nullptr)
     {
         LOG_TRACE("Using hudless: {:X}", (size_t) _paramHudless[fIndex].resource);
         auto state = m_FrameGenerationConfig.HUDLessColor =
@@ -262,10 +260,7 @@ bool FSRFG_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, bool useHudless, d
                   fIndex, (size_t) dfgPrepare.commandList);
 
         if (retCode == FFX_API_RETURN_OK)
-        {
-            SetHudlessDispatchReady();
             _commandList[fIndex]->Close();
-        }
     }
 
     if (Config::Instance()->FGUseMutexForSwapchain.value_or_default() && Mutex.getOwner() == 1)
@@ -274,11 +269,12 @@ bool FSRFG_Dx12::Dispatch(ID3D12GraphicsCommandList* cmdList, bool useHudless, d
         Mutex.unlockThis(1);
     };
 
-    _velocityReady[fIndex] = false;
+    _mvsReady[fIndex] = false;
     _depthReady[fIndex] = false;
     _hudlessReady[fIndex] = false;
     _uiReady[fIndex] = false;
     _distortionFieldReady[fIndex] = false;
+    _waitingExecute[fIndex] = true;
 
     return retCode == FFX_API_RETURN_OK;
 }
@@ -628,8 +624,8 @@ void FSRFG_Dx12::EvaluateState(ID3D12Device* device, FG_Constants& fgConstants)
         State::Instance().FGchanged = true;
     }
 
-    if (!State::Instance().FGchanged && Config::Instance()->FGEnabled.value_or_default() &&
-        TargetFrame() < FrameCount() && FfxApiProxy::InitFfxDx12() && !IsActive() &&
+    if (!State::Instance().FGchanged && Config::Instance()->FGEnabled.value_or_default() && !IsPaused() &&
+        FfxApiProxy::InitFfxDx12() && !IsActive() &&
         HooksDx::CurrentSwapchainFormat() != DXGI_FORMAT_UNKNOWN)
     {
         CreateObjects(device);
@@ -642,7 +638,10 @@ void FSRFG_Dx12::EvaluateState(ID3D12Device* device, FG_Constants& fgConstants)
         StopAndDestroyContext(State::Instance().SCchanged, false, false);
 
         if (State::Instance().activeFgInput == FGInput::Upscaler)
+        {
+            State::Instance().ClearCapturedHudlesses = true;
             Hudfix_Dx12::ResetCounters();
+        }
     }
 
     if (State::Instance().FGchanged)

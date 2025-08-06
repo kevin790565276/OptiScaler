@@ -391,18 +391,18 @@ bool XeSSFeature_Dx11::Evaluate(ID3D11DeviceContext* DeviceContext, NVSDK_NGX_Pa
         return false;
     }
 
-    ID3D11Resource* paramDepth = nullptr;
-    if (InParameters->Get(NVSDK_NGX_Parameter_Depth, &paramDepth) != NVSDK_NGX_Result_Success)
-        InParameters->Get(NVSDK_NGX_Parameter_Depth, (void**) &paramDepth);
+    if (LowResMV())
+    {
+        ID3D11Resource* paramDepth = nullptr;
+        if (InParameters->Get(NVSDK_NGX_Parameter_Depth, &paramDepth) != NVSDK_NGX_Result_Success)
+            InParameters->Get(NVSDK_NGX_Parameter_Depth, (void**) &paramDepth);
 
-    if (paramDepth)
-    {
-        LOG_DEBUG("Depth exist..");
-        params.pDepthTexture = paramDepth;
-    }
-    else
-    {
-        if (LowResMV())
+        if (paramDepth)
+        {
+            LOG_DEBUG("Depth exist..");
+            params.pDepthTexture = paramDepth;
+        }
+        else
         {
             LOG_ERROR("Depth not exist!!");
             return false;

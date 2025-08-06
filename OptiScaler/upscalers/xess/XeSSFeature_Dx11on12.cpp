@@ -234,8 +234,13 @@ bool XeSSFeatureDx11on12::Evaluate(ID3D11DeviceContext* InDeviceContext, NVSDK_N
         }
 
         _hasOutput = params.pOutputTexture != nullptr;
-        params.pDepthTexture = dx11Depth.Dx12Resource;
-        _hasDepth = params.pDepthTexture != nullptr;
+
+        if (LowResMV())
+        {
+            params.pDepthTexture = dx11Depth.Dx12Resource;
+            _hasDepth = params.pDepthTexture != nullptr;
+        }
+
         params.pExposureScaleTexture = dx11Exp.Dx12Resource;
         _hasExposure = params.pExposureScaleTexture != nullptr;
 

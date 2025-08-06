@@ -193,28 +193,26 @@ bool XeSSFeatureDx12::Evaluate(ID3D12GraphicsCommandList* InCommandList, NVSDK_N
         return false;
     }
 
-    if (InParameters->Get(NVSDK_NGX_Parameter_Depth, &params.pDepthTexture) != NVSDK_NGX_Result_Success)
-        InParameters->Get(NVSDK_NGX_Parameter_Depth, (void**) &params.pDepthTexture);
-
-    if (params.pDepthTexture)
+    if (LowResMV())
     {
-        LOG_DEBUG("Depth exist..");
-        params.pDepthTexture->SetName(L"params.pDepthTexture");
+        if (InParameters->Get(NVSDK_NGX_Parameter_Depth, &params.pDepthTexture) != NVSDK_NGX_Result_Success)
+            InParameters->Get(NVSDK_NGX_Parameter_Depth, (void**) &params.pDepthTexture);
 
-        if (Config::Instance()->DepthResourceBarrier.has_value())
-            ResourceBarrier(InCommandList, params.pDepthTexture,
-                            (D3D12_RESOURCE_STATES) Config::Instance()->DepthResourceBarrier.value(),
-                            D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-    }
-    else
-    {
-        if (LowResMV())
+        if (params.pDepthTexture)
+        {
+            LOG_DEBUG("Depth exist..");
+            params.pDepthTexture->SetName(L"params.pDepthTexture");
+
+            if (Config::Instance()->DepthResourceBarrier.has_value())
+                ResourceBarrier(InCommandList, params.pDepthTexture,
+                                (D3D12_RESOURCE_STATES) Config::Instance()->DepthResourceBarrier.value(),
+                                D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+        }
+        else
         {
             LOG_ERROR("Depth not exist!!");
             return false;
         }
-
-        params.pDepthTexture = nullptr;
     }
 
     if (!AutoExposure())

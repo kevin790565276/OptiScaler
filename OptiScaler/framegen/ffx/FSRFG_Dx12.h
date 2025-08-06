@@ -33,7 +33,7 @@ class FSRFG_Dx12 : public virtual IFGFeature_Dx12
 
     void EvaluateState(ID3D12Device* device, FG_Constants& fgConstants) override final;
 
-    bool Dispatch(ID3D12GraphicsCommandList* cmdList, bool useHudless, double frameTime) override final;
+    bool Dispatch() override final;
 
     void* FrameGenerationContext() override final;
     void* SwapchainContext() override final;

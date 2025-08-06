@@ -62,14 +62,6 @@ class IFGFeature_Dx12 : public virtual IFGFeature
     ID3D12CommandQueue* _gameCommandQueue = nullptr;
     HWND _hwnd = NULL;
 
-    bool _velocityReady[BUFFER_COUNT] {};
-    bool _depthReady[BUFFER_COUNT] {};
-    bool _hudlessReady[BUFFER_COUNT] {};
-    bool _uiReady[BUFFER_COUNT] {};
-    bool _distortionFieldReady[BUFFER_COUNT] {};
-    bool _hudlessDispatchReady[BUFFER_COUNT] {};
-    bool _noHudless[BUFFER_COUNT] {};
-
     Dx12Resource _paramVelocity[BUFFER_COUNT] {};
     Dx12Resource _paramVelocityCopy[BUFFER_COUNT] {};
     Dx12Resource _paramDepth[BUFFER_COUNT] {};
@@ -105,14 +97,13 @@ class IFGFeature_Dx12 : public virtual IFGFeature
 
     virtual void EvaluateState(ID3D12Device* device, FG_Constants& fgConstants) = 0;
 
-    virtual bool Dispatch(ID3D12GraphicsCommandList* cmdList, bool useHudless, double frameTime) = 0;
+    virtual bool Dispatch() = 0;
 
     virtual void* FrameGenerationContext() = 0;
     virtual void* SwapchainContext() = 0;
 
     // IFGFeature
     void ReleaseObjects() override final;
-
     void CreateObjects(ID3D12Device* InDevice);
 
     void SetVelocity(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* velocity, D3D12_RESOURCE_STATES state);
@@ -124,23 +115,8 @@ class IFGFeature_Dx12 : public virtual IFGFeature
     void SetDistortionField(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* ui, D3D12_RESOURCE_STATES state,
                             bool makeCopy = false);
 
-    bool NoHudless();
+    bool ExecuteCommandList(ID3D12CommandQueue* queue);
     ID3D12CommandList* GetCommandList();
 
     IFGFeature_Dx12() = default;
-
-    // Inherited via IFGFeature
-    void SetVelocityReady() override;
-    void SetDepthReady() override;
-    void SetHudlessReady() override;
-    void SetUIReady() override;
-    void SetDistortionFieldReady() override;
-    void SetHudlessDispatchReady() override;
-    void Present() override;
-    bool VelocityReady() override;
-    bool DepthReady() override;
-    bool UIReady() override;
-    bool DistortionFieldReady() override;
-    bool HudlessReady() override;
-    bool ReadyForExecute() override;
 };

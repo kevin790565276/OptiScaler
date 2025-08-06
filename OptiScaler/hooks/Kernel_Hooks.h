@@ -276,6 +276,8 @@ class KernelHooks
             {
                 if (/*!_overlayMethodsCalled &&*/ DxgiProxy::Module() != nullptr)
                 {
+                    CheckForGPU();
+
                     LOG_INFO("Calling CreateDxgiFactory methods for overlay!");
                     IDXGIFactory* factory = nullptr;
                     IDXGIFactory1* factory1 = nullptr;
@@ -367,6 +369,8 @@ class KernelHooks
             if (module != nullptr)
             {
                 DxgiProxy::Init(module);
+
+                CheckForGPU();
 
                 if (!State::Instance().enablerAvailable && Config::Instance()->DxgiSpoofing.value_or_default())
                     HookDxgiForSpoofing();
@@ -711,6 +715,8 @@ class KernelHooks
             {
                 if (/*!_overlayMethodsCalled && */ DxgiProxy::Module() != nullptr)
                 {
+                    CheckForGPU();
+
                     LOG_INFO("Calling CreateDxgiFactory methods for overlay!");
                     IDXGIFactory* factory = nullptr;
                     IDXGIFactory1* factory1 = nullptr;
@@ -792,6 +798,8 @@ class KernelHooks
             if (module != nullptr)
             {
                 DxgiProxy::Init(module);
+
+                CheckForGPU();
 
                 if (!State::Instance().enablerAvailable && Config::Instance()->DxgiSpoofing.value_or_default())
                     HookDxgiForSpoofing();

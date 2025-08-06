@@ -474,16 +474,16 @@ bool XeSSFeature_Vk::Evaluate(VkCommandBuffer InCmdBuffer, NVSDK_NGX_Parameter* 
         return false;
     }
 
-    NVSDK_NGX_Resource_VK* paramDepth = nullptr;
-    if (InParameters->Get(NVSDK_NGX_Parameter_Depth, (void**) &paramDepth) == NVSDK_NGX_Result_Success &&
-        paramDepth != nullptr)
+    if (LowResMV())
     {
-        LOG_DEBUG("Depth exist..");
-        params.depthTexture = NV_to_XeSS(paramDepth);
-    }
-    else
-    {
-        if (LowResMV())
+        NVSDK_NGX_Resource_VK* paramDepth = nullptr;
+        if (InParameters->Get(NVSDK_NGX_Parameter_Depth, (void**) &paramDepth) == NVSDK_NGX_Result_Success &&
+            paramDepth != nullptr)
+        {
+            LOG_DEBUG("Depth exist..");
+            params.depthTexture = NV_to_XeSS(paramDepth);
+        }
+        else
         {
             LOG_ERROR("Depth not exist!!");
             return false;

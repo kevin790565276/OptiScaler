@@ -619,6 +619,7 @@ LRESULT MenuCommon::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
             _isVisible = false;
             _showMipmapCalcWindow = false;
+            _showHudlessWindow = false;
 
             io.MouseDrawCursor = false;
             io.WantCaptureKeyboard = false;
@@ -1355,6 +1356,7 @@ bool MenuCommon::RenderMenu()
                     pfn_ClipCursor(&_cursorLimit);
 
                 _showMipmapCalcWindow = false;
+                _showHudlessWindow = false;
             }
 
             io.MouseDrawCursor = _isVisible;
@@ -1854,7 +1856,7 @@ bool MenuCommon::RenderMenu()
         {
             bool rcasEnabled = false;
 
-            if (!_showMipmapCalcWindow && !ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow))
+            if (!_showMipmapCalcWindow && !_showHudlessWindow && !ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow))
                 ImGui::SetWindowFocus();
 
             _selectedScale = ((int) (Config::Instance()->MenuScale.value() * 10.0f)) - 5;
@@ -2756,6 +2758,7 @@ bool MenuCommon::RenderMenu()
                         {
                             Config::Instance()->FGHUDFix = fgHudfix;
                             LOG_DEBUG("Enabled set FGHUDFix: {}", fgHudfix);
+                            State::Instance().ClearCapturedHudlesses = true;
                             State::Instance().FGchanged = true;
                         }
                         ShowHelpMarker("Enable HUD stability fix, might cause crashes!");
@@ -2776,6 +2779,10 @@ bool MenuCommon::RenderMenu()
                             LOG_DEBUG("Enabled set FGHUDLimit: {}", hudFixLimit);
                         }
                         ShowHelpMarker("Delay HUDless capture, high values might cause crash!");
+
+                        ImGui::SameLine(0.0f, 16.0f);
+                        if (ImGui::Button("Res##2"))
+                            _showHudlessWindow = !_showHudlessWindow;
 
                         ImGui::EndDisabled();
 
@@ -4375,6 +4382,7 @@ bool MenuCommon::RenderMenu()
                         pfn_ClipCursor(&_cursorLimit);
 
                     _showMipmapCalcWindow = false;
+                    _showHudlessWindow = false;
                     io.MouseDrawCursor = false;
                     io.WantCaptureKeyboard = false;
                     io.WantCaptureMouse = false;
@@ -4400,16 +4408,8 @@ bool MenuCommon::RenderMenu()
                     float posX;
                     float posY;
 
-                    if (currentFeature != nullptr && !currentFeature->IsFrozen())
-                    {
-                        posX = ((float) State::Instance().currentFeature->DisplayWidth() - winSize.x) / 2.0f;
-                        posY = ((float) State::Instance().currentFeature->DisplayHeight() - winSize.y) / 2.0f;
-                    }
-                    else
-                    {
-                        posX = ((float) State::Instance().screenWidth - winSize.x) / 2.0f;
-                        posY = ((float) State::Instance().screenHeight - winSize.x) / 2.0f;
-                    }
+                    posX = ((float) io.DisplaySize.x - winSize.x) / 2.0f;
+                    posY = ((float) io.DisplaySize.y - winSize.y) / 2.0f;
 
                     // don't position menu outside of screen
                     if (posX < 0.0 || posY < 0.0)
@@ -4428,8 +4428,8 @@ bool MenuCommon::RenderMenu()
             if (_showMipmapCalcWindow && currentFeature != nullptr && !currentFeature->IsFrozen() &&
                 currentFeature->IsInited())
             {
-                auto posX = (State::Instance().currentFeature->DisplayWidth() - 450.0f) / 2.0f;
-                auto posY = (State::Instance().currentFeature->DisplayHeight() - 200.0f) / 2.0f;
+                auto posX = (io.DisplaySize.x - 450.0f) / 2.0f;
+                auto posY = (io.DisplaySize.y - 200.0f) / 2.0f;
 
                 ImGui::SetNextWindowPos(ImVec2 { posX, posY }, ImGuiCond_FirstUseEver);
                 ImGui::SetNextWindowSize(ImVec2 { 450.0f, 200.0f }, ImGuiCond_FirstUseEver);
@@ -4565,6 +4565,70 @@ bool MenuCommon::RenderMenu()
                     ImGui::End();
                 }
             }
+
+            auto fg = State::Instance().currentFG;
+            if (_showHudlessWindow && Config::Instance()->FGHUDFix.value_or_default() && fg != nullptr &&
+                fg->IsActive())
+            {
+                auto posX = (io.DisplaySize.x - 320.0f) / 2.0f;
+                auto posY = (io.DisplaySize.y - 400.0f) / 2.0f;
+
+                ImGui::SetNextWindowPos(ImVec2 { posX, posY }, ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowSize(ImVec2 { 320.0f, 400.0f });
+
+                if (ImGui::Begin("Hudless Resources", nullptr, flags))
+                {
+                    if (!ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow))
+                        ImGui::SetWindowFocus();
+
+                    int btnCount = 100;
+
+                    if (ImGui::BeginTable("HudlessTable", 2, ImGuiTableFlags_SizingFixedFit))
+                    {
+                        ImGui::TableSetupColumn("##1", ImGuiTableColumnFlags_WidthStretch);
+                        ImGui::TableSetupColumn("##2", ImGuiTableColumnFlags_WidthFixed);
+
+                        ankerl::unordered_dense::map<void*, CapturedHudlessInfo>::iterator it;
+
+                        for (it = State::Instance().CapturedHudlesses.begin();
+                             it != State::Instance().CapturedHudlesses.end(); it++)
+                        {
+                            ImGui::TableNextRow();
+
+                            ImGui::TableSetColumnIndex(0);
+
+                            ImGui::Text(std::format("{:X}, Count: {}, {}", (size_t) it->first, it->second.usageCount,
+                                                    it->second.enabled ? "Active" : "Passive")
+                                            .c_str());
+
+                            ImGui::TableSetColumnIndex(1);
+
+                            btnCount++;
+                            std::string text;
+
+                            if (it->second.enabled)
+                                text = std::format("Disable##{}", btnCount);
+                            else
+                                text = std::format("Enable##{}", btnCount);
+
+                            if (ImGui::Button(text.c_str()))
+                                it->second.enabled = !it->second.enabled;
+                        }
+
+                        ImGui::EndTable();
+                    }
+
+                    if (ImGui::Button("Clear##4"))
+                        State::Instance().ClearCapturedHudlesses = true;
+
+                    ImGui::SameLine(0.0f, 8.0f);
+
+                    if (ImGui::Button("Close##4"))
+                        _showHudlessWindow = false;
+
+                    ImGui::End();
+                }
+            }
         }
 
         if (Config::Instance()->UseHQFont.value_or_default())
@@ -4695,6 +4759,7 @@ void MenuCommon::HideMenu()
         pfn_ClipCursor(&_cursorLimit);
 
     _showMipmapCalcWindow = false;
+    _showHudlessWindow = false;
 
     RECT windowRect = {};
 

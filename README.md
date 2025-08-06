@@ -38,27 +38,33 @@
 **Key aspects of OptiScaler:**
 - Enables usage of XeSS, FSR2, FSR3, **FSR4**$`^2`$ (_RDNA4 only_) and DLSS in upscaler-enabled games
 - Allows users to fine-tune their upscaling experience with a wide range of tweaks and enhancements (RCAS & MAS, Output Scaling, DLSS Presets, Ratio & DRS Overrides etc.)
-- Since v0.7.0+, added ***experimental DX12*** frame generation support with possible HUDfix solution ([**OptiFG**](#optifg-powered-by-fsr3-fg--hudfix-experimental-hud-ghosting-fix) by FSR3)
-- Supports [**Fakenvapi**](#installation) integration - enables Reflex hooking and injecting _Anti-Lag 2_ (RDNA1+ only) or _LatencyFlex_ (LFX) - **_not bundled_**$`^3`$  
-- Since v0.7.7, added support for **Nukem's** FSR FG mod [**dlssg-to-fsr3**](#installation), only supports games with ***native DLSS-FG*** - **_not bundled_**$`^3`$  
+- Since v0.7.0+, added ***experimental DX12*** frame generation support with possible HUDfix solution ([**OptiFG**](#optifg-powered-by-fsr3-fg--hudfix-experimental-hud-ghosting-fix) by FSR3FG)
+- Supports [**Fakenvapi**](#installation) integration - enables Reflex hooking and injecting _Anti-Lag 2_ (RDNA1+ only), _LatencyFlex_ (LFX) or _XeLL_ (Intel only) - **_not bundled_**$`^3`$  
+- Since v0.7.7, added support for **Nukem's** FSR FG mod [**dlssg-to-fsr3**](#installation), only supports games with ***native DLSS-FG*** - **_not bundled_**$`^3`$
+- Since v0.7.8, added **ASI plugin loading** support (_disabled_ by default, loads from customisable folder, default `plugins`)
+- New project - [**OptiPatcher**](https://github.com/optiscaler/OptiPatcher) - an ASI Plugin for OptiScaler for enabling DLSS without spoofing in supported games.
+- Since v0.7.8, OptiScaler is now automatically applying some game patches for a better out-of-the-box experience
 - For a detailed list of all features, check [Features](Features.md)
 
 
 > [!IMPORTANT]
 > _**Always check the [Wiki Compatibility list](https://github.com/optiscaler/OptiScaler/wiki) for known game issues and workarounds.**_  
-> Also please check the  [***OptiScaler known issues***](#known-issues) at the end regarding **RTSS** compatibility.
+> Also please check the  [***OptiScaler known issues***](#known-issues) at the end regarding **RTSS** compatibility.  
 > A separate [***FSR4 Compatibility list***](https://github.com/optiscaler/OptiScaler/wiki/FSR4-Compatibility-List) is available for community-sourced tested games.  
 > ***[3]** For **not bundled** items, please check [Installation](#installation).*  
 
 > [!NOTE]
+> ### Upscaler notes
 > <details>
->  <summary><b>Expand for [1], [2] </b></summary>  
+>  <summary><b>Click for [1], [2] </b></summary>  
 >  
-> ***[1]** Regarding **XeSS**, since Unreal Engine plugin does not provide depth, replacing in-game XeSS breaks other upscalers (e.g. Redout 2 as a XeSS-only game), but you can still apply RCAS sharpening to XeSS to reduce blurry visuals (in short, if it's a UE game, in-game XeSS only works with XeSS in OptiScaler overlay).*
+> **[1]** For **Unreal Engine** games, only UE XeSS -> Opti XeSS/Opti FSR4 work  
+>  
+> *Regarding **XeSS** inputs, since **Unreal Engine plugin** does not provide depth, replacing in-game XeSS breaks other upscalers (e.g. Redout 2 as a XeSS-only game), but you can still apply RCAS sharpening to XeSS to reduce blurry visuals.* 
 >
 > *Regarding **FSR inputs**, FSR 3.1 is the first version with a fully standardised, forward-looking API and should be fully supported. Since FSR2 and FSR3 support custom interfaces, game support will depend on the developers' implementation. With Unreal Engine games, you might need [ini tweaks](https://github.com/optiscaler/OptiScaler/wiki/Unreal-Engine-Tweaks) for FSR inputs.*  
 >
-> ***[2]** Regarding **FSR4**, support added with recent Nightly builds. Please check [FSR4 Compatibility list](https://github.com/optiscaler/OptiScaler/wiki/FSR4-Compatibility-List) for known supported games and general info.*
+> **[2]** *Regarding **FSR4**, support added with recent Nightly builds. Please check [FSR4 Compatibility list](https://github.com/optiscaler/OptiScaler/wiki/FSR4-Compatibility-List) for known supported games and general info.*
 > 
 > </details>
 
@@ -68,9 +74,13 @@
 *This project is based on [PotatoOfDoom](https://github.com/PotatoOfDoom)'s excellent [CyberFSR2](https://github.com/PotatoOfDoom/CyberFSR2).*
 
 ## How it works?
-OptiScaler implements the necessary API methods of DLSS2+ & NVAPI, XeSS and FSR2+ to act as a middleware. It intercepts upscaler calls from the game (_**Inputs**_) and redirects them to the chosen upscaling backend (_**Output**_), allowing games using one technology to use another of your choice. **Inputs -> OptiScaler -> Outputs**
+* OptiScaler acts as a middleware, it intercepts upscaler calls from the game (_**Inputs**_) and redirects them to the chosen upscaling backend (_**Output**_), allowing user to replace one technology with another one. **Inputs -> OptiScaler -> Outputs**  
+* _Or put more bluntly, **Input** is the upscaler used in game settings, and **Output** the one selected in Opti Overlay._
+
 > [!NOTE]
-> Pressing **`Insert`** should open the OptiScaler **Overlay** in-game with all of the options (`ShortcutKey=` can be changed in the config file). Pressing **`Page Up`** shows the performance stats overlay in the top left, and can be cycled between different modes with **`Page Down`**.
+> * Pressing **`Insert`** should open the Optiscaler **Overlay** in-game with all of the options (_`ShortcutKey=` can be changed in the config file_). 
+> * Pressing **`Page Up`** shows the performance stats overlay in the top left, and can be cycled between different modes with **`Page Down`** (_keybinds customisable in the overlay_).  
+> * If Opti overlay is instantly disappearing after trying Insert a few times, maybe try **`Alt + Insert`** ([reported workaround](https://github.com/optiscaler/OptiScaler/issues/484) for alternate keyboard layouts).
 
 ![inputs_and_outputs](https://github.com/user-attachments/assets/ddc27ab3-7ce4-428e-93d7-cf52333ffa69)
 
@@ -97,7 +107,7 @@ Currently **OptiScaler** can be used with DirectX 11, DirectX 12 and Vulkan, but
 > <details>
 >  <summary><b>Expand for [1]</b></summary>
 >
-> _**[1]** These implementations use a background DirectX12 device to be able to use Dirext12-only upscalers. There is a 10-15% performance penalty for this method, but allows many more upscaler options. Also native DirectX11 implementation of FSR 2.2.1 is a backport from Unity renderer and has its own problems of which some were fixed by OptiScaler._
+> _**[1]** These implementations use a background DirectX12 device to be able to use DX12-only upscalers. There's a performance penalty up to 10-ish % for this method, but allows many more upscaler options. Also native DX11 implementation of FSR 2.2.1 is a backport from Unity renderer and has its own problems of which some were fixed by OptiScaler._
 > </details>
 
 #### For Vulkan
@@ -127,7 +137,7 @@ Please check [this](Config.md) document for configuration parameters and explana
 If you can't open the in-game menu overlay:
 1. Please check that you have enabled DLSS, XeSS or FSR from game options and are in-game, not inside game settings
 2. If using legacy installation, please try opening menu while you are in-game (while 3D rendering is happening)
-3. If you are using **RTSS** (MSI Afterburner, CapFrameX), please enable this setting in RTSS and/or try updating RTSS. **When using OptiFG please disable RTSS for best compatibility**.
+3. If you are using **RTSS** (MSI Afterburner, CapFrameX), please enable this setting in RTSS and/or try updating RTSS. **When using OptiFG, please disable RTSS for best compatibility**.
  
  ![image](https://github.com/optiscaler/OptiScaler/assets/35529761/8afb24ac-662a-40ae-a97c-837369e03fc7)
 
@@ -151,7 +161,7 @@ Also check the community [Wiki](https://github.com/optiscaler/OptiScaler/wiki) f
 * @FakeMichau for continous support, testing and feature creep
 * @QM for continous testing efforts and helping me to reach games
 * @TheRazerMD for continous testing and support
-* @Cryio, @krispy, @krisshietala, @Lordubuntu, @scz, @Veeqo for their hard work on [compatibility matrix](https://docs.google.com/spreadsheets/d/1qsvM0uRW-RgAYsOVprDWK2sjCqHnd_1teYAx00_TwUY)
+* @Cryio, @krispy, @krisshietala, @Lordubuntu, @scz, @Veeqo for their hard work on (now outdated) [compatibility matrix](https://docs.google.com/spreadsheets/d/1qsvM0uRW-RgAYsOVprDWK2sjCqHnd_1teYAx00_TwUY)
 * And the whole DLSS2FSR community for all their support
 
 ## Credit

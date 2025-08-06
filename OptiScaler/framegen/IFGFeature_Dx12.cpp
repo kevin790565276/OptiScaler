@@ -275,6 +275,8 @@ void IFGFeature_Dx12::SetHudless(ID3D12GraphicsCommandList* cmdList, ID3D12Resou
     auto index = GetIndex();
     LOG_TRACE("Setting hudless, index: {}, Resource: {:X}, CmdList: {:X}", index, (size_t) hudless, (size_t) cmdList);
 
+    _noHudless[index] = false;
+
     hudless->SetName(std::format(L"HudlessResource_{}", index).c_str());
 
     if (cmdList == nullptr || !makeCopy)
@@ -429,42 +431,17 @@ void IFGFeature_Dx12::ReleaseObjects()
 
 ID3D12CommandList* IFGFeature_Dx12::GetCommandList() { return _commandList[GetIndex()]; }
 
-bool IFGFeature_Dx12::NoHudless() { return _noHudless[GetIndex()]; }
-
-void IFGFeature_Dx12::SetVelocityReady() { _velocityReady[GetIndex()] = true; }
-
-void IFGFeature_Dx12::SetDepthReady() { _depthReady[GetIndex()] = true; }
-
-void IFGFeature_Dx12::SetHudlessReady() { _hudlessReady[GetIndex()] = true; }
-
-void IFGFeature_Dx12::SetUIReady() { _uiReady[GetIndex()] = true; }
-
-void IFGFeature_Dx12::SetDistortionFieldReady() { _distortionFieldReady[GetIndex()] = true; }
-
-void IFGFeature_Dx12::SetHudlessDispatchReady() { _hudlessDispatchReady[GetIndex()] = true; }
-
-void IFGFeature_Dx12::Present()
+bool IFGFeature_Dx12::ExecuteCommandList(ID3D12CommandQueue* queue)
 {
-    auto fIndex = LastDispatchedFrame() % BUFFER_COUNT;
-    _velocityReady[fIndex] = false;
-    _depthReady[fIndex] = false;
-    _hudlessReady[fIndex] = false;
-    _uiReady[fIndex] = false;
-    _distortionFieldReady[fIndex] = false;
-    _hudlessDispatchReady[fIndex] = false;
-}
+    LOG_DEBUG();
 
-bool IFGFeature_Dx12::VelocityReady() { return _velocityReady[GetIndex()]; }
-bool IFGFeature_Dx12::DepthReady() { return _depthReady[GetIndex()]; }
-bool IFGFeature_Dx12::UIReady() { return _uiReady[GetIndex()]; }
-bool IFGFeature_Dx12::DistortionFieldReady() { return _distortionFieldReady[GetIndex()]; }
+    if (WaitingExecution())
+    {
+        auto cmdList = GetCommandList();
+        queue->ExecuteCommandLists(1, &cmdList);
+        SetExecuted();
+        return true;
+    }
 
-bool IFGFeature_Dx12::HudlessReady() { return _hudlessReady[GetIndex()]; }
-
-// Only makes sense for upscaler inputs because the list of buffers
-// we want ready might differ depending on FG inputs and what the game provides
-bool IFGFeature_Dx12::ReadyForExecute()
-{
-    auto fIndex = GetIndex();
-    return _velocityReady[fIndex] && _depthReady[fIndex] && _hudlessReady[fIndex];
+    return false;
 }

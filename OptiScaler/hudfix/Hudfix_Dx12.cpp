@@ -6,9 +6,6 @@
 
 #include <framegen/IFGFeature_Dx12.h>
 
-// Use time limit to stop hudless search before Present call
-// #define USE_TIME_LIMIT
-
 bool Hudfix_Dx12::CreateObjects()
 {
     if (_commandQueue != nullptr)
@@ -336,7 +333,9 @@ void Hudfix_Dx12::HudlessFound(ID3D12GraphicsCommandList* cmdList)
     _captureCounter[GetIndex()] = 9999;
 
     auto fg = State::Instance().currentFG;
-    fg->Dispatch(nullptr, true, State::Instance().lastFrameTime);
+
+    if (fg != nullptr)
+        fg->Dispatch();
 
     // Increase counter
     _fgCounter++;
@@ -379,6 +378,12 @@ void Hudfix_Dx12::UpscaleStart()
         State::Instance().FGcapturedResourceCount = 0;
         State::Instance().FGresetCapturedResources = false;
     }
+
+    if (State::Instance().ClearCapturedHudlesses)
+    {
+        State::Instance().ClearCapturedHudlesses = false;
+        State::Instance().CapturedHudlesses.clear();
+    }
 }
 
 void Hudfix_Dx12::UpscaleEnd(UINT64 frameId, float lastFrameTime)
@@ -391,49 +396,9 @@ void Hudfix_Dx12::UpscaleEnd(UINT64 frameId, float lastFrameTime)
     // Get new index and clear resources
     auto index = GetIndex();
     _captureCounter[index] = 0;
-
-    // Calculate target time for capturing hudless
-#ifdef USE_TIME_LIMIT
-    auto now = Util::MillisecondsNow();
-    auto diff = 0.0f;
-
-    if (_upscaleEndTime <= 0.1f || _lastDiffTime <= 0.1f)
-        diff = 8.0f;
-    else
-        diff = _lastDiffTime * 2.0f;
-
-    if (diff < 0.0f || diff > 8.0f)
-        diff = 8.0f;
-
-    diff = 40.0f;
-
-    _targetTime = now + diff;
-
-    LOG_DEBUG("_upscaleCounter: {}, _fgCounter: {}, _lastDiffTime: {}, _frameTime: {}, currentTime: {}, limitTime: {}",
-              _upscaleCounter, _fgCounter, _lastDiffTime, _frameTime, now, _targetTime);
-
-    _upscaleEndTime = now;
-    _lastDiffTime = 0.0f;
-#endif
 }
 
-void Hudfix_Dx12::PresentStart()
-{
-    return;
-
-    //// Calculate last upscale to present time
-    // if (_upscaleEndTime > 0.1f)
-    //     _lastDiffTime = Util::MillisecondsNow() - _upscaleEndTime;
-    // else
-    //     _lastDiffTime = 0.0f;
-
-    //// FG not run yet!
-    // if (_upscaleCounter > _fgCounter && IsResourceCheckActive() && CheckCapture())
-    //{
-    //     LOG_WARN("FG not run yet! _upscaleCounter: {}, _fgCounter: {}", _upscaleCounter, _fgCounter);
-    //     HudlessFound(false);
-    // }
-}
+void Hudfix_Dx12::PresentStart() { return; }
 
 void Hudfix_Dx12::PresentEnd() { LOG_DEBUG(""); }
 
@@ -480,6 +445,13 @@ bool Hudfix_Dx12::CheckForHudless(std::string callerName, ID3D12GraphicsCommandL
     {
         if (!CheckResource(resource))
             break;
+
+        CapturedHudlessInfo* capturedHudlessInfo = &State::Instance().CapturedHudlesses[resource->buffer];
+        if (capturedHudlessInfo != nullptr && !capturedHudlessInfo->enabled)
+        {
+            LOG_DEBUG("Skipping {:X}, disabled from captured hudless list!", (size_t) resource->buffer);
+            break;
+        }
 
         // Prevent double capture
         LOG_DEBUG("Waiting _checkMutex");
@@ -769,22 +741,14 @@ bool Hudfix_Dx12::CheckForHudless(std::string callerName, ID3D12GraphicsCommandL
         _skipHudlessChecks = true;
         HudlessFound(cmdList);
 
+        if (capturedHudlessInfo != nullptr)
+            capturedHudlessInfo->usageCount++;
+        else
+            State::Instance().CapturedHudlesses[resource->buffer] = {};
+
         return true;
 
     } while (false);
-
-#ifdef USE_TIME_LIMIT
-    // Check for limit time
-    auto now = Util::MillisecondsNow();
-    if (now > _targetTime && IsResourceCheckActive() && CheckCapture())
-    {
-        LOG_WARN("Reached limit time: {} > {}", now, _targetTime);
-        // This will prevent resource tracker to check these operations
-        // Will reset after FG dispatch
-        _skipHudlessChecks = true;
-        HudlessFound(false);
-    }
-#endif // USE_TIME_LIMIT
 
     return false;
 }

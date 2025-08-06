@@ -373,11 +373,10 @@ class Config
     CustomOptional<bool> FGHudfixFullSync { false };
     CustomOptional<bool> FGDontUseSwapchainBuffers { false };
     CustomOptional<bool> FGRelaxedResolutionCheck { false };
-    // CustomOptional<bool> FGExecuteAfterCallback { false };
 
     // OptiFG - Resource Tracking
     CustomOptional<bool> FGAlwaysTrackHeaps { false };
-    CustomOptional<bool> FGResourceBlocking { true };
+    CustomOptional<bool> FGResourceBlocking { false };
 
     // OptiFG - DLSS-D Depth scale
     CustomOptional<bool> FGEnableDepthScale { false };

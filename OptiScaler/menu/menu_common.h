@@ -38,6 +38,7 @@ class MenuCommon
 
     // mipmap calculations
     inline static bool _showMipmapCalcWindow = false;
+    inline static bool _showHudlessWindow = false;
     inline static float _mipBias = 0.0f;
     inline static float _mipBiasCalculated = 0.0f;
     inline static uint32_t _mipmapUpscalerQuality = 0;

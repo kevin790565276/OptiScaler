@@ -1,5 +1,82 @@
 ## Release and Build Change Log (Newest to Oldest)
 
+## v0.7.8
+* Everything after 0.7.7-pre9 including major FSR4, HUDfix, UI improvements, SL spoof, ASI loading support, auto game patches etc.
+* More OptiFG improvements
+* Prevent circular calling of nvngx methods on Nvidia
+* Added options for debug tear, reset and pacing lines for OptiFG
+* Update to XeSS 2.1
+* Use D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES instead of 0
+* Added handling of XESS_INIT_FLAG_RESPONSIVE_PIXEL_MASK flag
+* Added RDNA4 checks after dxgi.dll loaded
+* Add KCD2 'Win64MasterMasterSteamPGO' path for search
+
+## v0.7.7-pre13
+* More game quirks added
+* More **HUDfix improvements** - _Nvidia still hit and miss (logs don't help much)_
+* **ASI plugin** loading now **disabled by default** - _can be enabled with `LoadAsiPlugins=true`_
+* Fixed Unity FG Flip not working
+* Update FSR3.X name according to FSR4Update option
+* Fixed **Prey Luma Remastered** mod crash with **w/Dx12 upscalers**
+* Added more game quirks - _Returnal, WUCHANG, Death Stranding (and DC)_
+* Some XeSS DX11 crash/bug fixes when no DLL present
+* OptiFG improvements
+* Fixed amdxc64-less FSR 4 on Linux (thanks to @FakeMichau)
+* Fixed auto plugins path issue - _shouldn't require setting `Path=plugins` anymore_
+* Loading a supported OptiPatcher game now automatically disables Dxgi spoofing - _if you need Nukem, set `Dxgi=true`_
+* OG Death Stranding (non-DC) should now work
+* Hopefully fixed WUCHANG crash on boot for good - _don't update Streamline files, it breaks Opti for whatever reason_
+
+## v0.7.7-pre12
+* Fixed unsupported Typeless texture formats for **FSR4** (thanks to @FakeMichau) - **now all previously crashing games should work** 🎉
+* Added **FSR4 Model selection** (thanks to @FakeMichau)
+* **Unreal Engine XeSS inputs** should now be supported for **FSR4** also 🎉  (thanks to **hereCOMESlappy**)
+* Added support for **loading ASI files** from `plugins` folder
+* Improved stability and compatibility (?) of **Hudfix**
+* Improved stability and performance of **w/Dx12 upscalers**
+* Added **FlipMetering** disabling option (requires `Fakenvapi`, thanks to @TheRazerMD) - _autodisabled for AMD/Intel, fixes erratic frametimes when Nukem is enabled in DLSS4 games_
+* Overlay **UI changes** (thanks to @FakeMichau majorly)
+* Added **FSR 3.1.4** with new configurable parametres
+* Fixed and improved **FPS Limiter** (thanks to @FakeMichau)
+* **No Man's Sky** issues have finally been fixed (thanks to @FakeMichau)
+* Added **experimental Anti-Lag 2 Vulkan** support (requires `Fakenvapi`, thanks to @FakeMichau) - _requires enabling Anti-Lag in Adrenaline Game profile_
+* Added **Linux installer/uninstaller script** (thanks to **xXJSONDeruloXx**)
+* Added **experimental** spoofing only for Streamline (thanks to @FakeMichau)
+* Added custom spoofing options which gives you control over spoofed device. `SpoofedVendorId` & `SpoofedDeviceId`
+* Added custom spoofing options for selecting device(s) to be spoofed. `TargetVendorId `& `TargetDeviceId`
+* Added hex value support for int/uint ini settings. Especially useful for shortcut keys and device ids.
+* Fixed pressed keys getting stuck while opening menu (thanks to **peterberbec**)
+* Fixed Dx11 gamepad key replaying on menu opening (thanks to **Merlinch**)
+* Added resource flip for Unity games
+* Added Keybinds modifications
+* Added jitter count
+* Added UE Atomic64 Spoofing for Intel Arc
+* Fix FSR3 DX11 (thanks to @MapleHinata)
+* Fix Unity DX11 (thanks to @MapleHinata)
+* Fixed DLSS, DLSSG dlls autolocating
+* Fixed wine exports patch (thanks to @FakeMichau)
+* Implement jitter scale for XeSS inputs (thanks to @FakeMichau)
+* FFX VK and XeSS VK fixes - should fix Indiana Jones and the Great Circle
+* Fixed FF14 crashes with certain plugins (thanks to @MapleHinata) /
+* Improved Anisotropy Filtering and Mipmap LOD bias **overrides**
+* Improvements and fixes to **spoofing** (thanks to @FakeMichau)
+* Fixed **Nukem's mod** regressions (thanks to @FakeMichau)
+* Always **prefer model 1** for FSR 4 Quality (thanks to @FakeMichau) - _should improve shimmering/instability on FSR4 Quality preset in certain games_
+* Fixed **doubled** uninstaller batch files creation
+* Added **JustFPS option** to Performance Overlay /
+* Latest resource tracking and **Hudfix** changes _(and regressions)_
+* Added more automatically applying **game quirks** - _should make it easier for users not reading the Wiki_
+* Use **FSR 4 model 1** with **Ultra Quality presets** as well (thanks to @FakeMichau) - _should improve shimmering/instability in certain games_
+* Improved pattern finding
+* Disable **Dxgi spoofing** by default for **select games** (thanks to @FakeMichau)
+* Improvements to **Streamline spoofing** (thanks to @FakeMichau)
+* Fix for missing adapter name at menu
+* Added a small **splash message** when OptiScaler is loaded (disabled on Linux) - _easier to verify Opti loaded successfully, can be disabled in the INI_
+* Some Overlay fixes
+* Detect RTSS Reflex injection (thanks to @FakeMichau)
+* Fix spoof-less DLSS regression (thanks to @FakeMichau)
+* Added more game quirks
+
 ## v0.7.7-pre11
 * Improved stability and compatibility (?) of Hudfix 
 * Improved stability and performance of w/Dx12 upscalers
