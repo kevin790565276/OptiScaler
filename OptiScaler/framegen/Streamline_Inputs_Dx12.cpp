@@ -210,7 +210,7 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         // distortionFieldSent = true;
 
-        ResTrack_Dx12::SetUICmdList(cmdBuffer); // TODO: add a new one for DistortionField
+        ResTrack_Dx12::SetDistortionFieldCmdList(cmdBuffer);
 
         auto distortionFieldResource = (ID3D12Resource*) tag.resource->native;
 

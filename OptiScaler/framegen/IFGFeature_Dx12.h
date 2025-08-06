@@ -134,11 +134,13 @@ class IFGFeature_Dx12 : public virtual IFGFeature
     void SetDepthReady() override;
     void SetHudlessReady() override;
     void SetUIReady() override;
+    void SetDistortionFieldReady() override;
     void SetHudlessDispatchReady() override;
     void Present() override;
     bool VelocityReady() override;
     bool DepthReady() override;
     bool UIReady() override;
+    bool DistortionFieldReady() override;
     bool HudlessReady() override;
     bool ReadyForExecute() override;
 };

@@ -68,11 +68,13 @@ class IFGFeature
     virtual void SetDepthReady() = 0;
     virtual void SetHudlessReady() = 0;
     virtual void SetUIReady() = 0;
+    virtual void SetDistortionFieldReady() = 0;
     virtual void SetHudlessDispatchReady() = 0;
 
     virtual bool VelocityReady() = 0;
     virtual bool DepthReady() = 0;
     virtual bool UIReady() = 0;
+    virtual bool DistortionFieldReady() = 0;
     virtual bool HudlessReady() = 0;
     virtual bool ReadyForExecute() = 0;
 

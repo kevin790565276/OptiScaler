@@ -108,6 +108,7 @@ static void* _hudlessCmdList = nullptr;
 static void* _depthCmdList = nullptr;
 static void* _mvsCmdList = nullptr;
 static void* _uiCmdList = nullptr;
+static void* _distortionFieldCmdList = nullptr;
 
 struct HeapCacheTLS
 {
@@ -696,7 +697,8 @@ void ResTrack_Dx12::hkExecuteCommandLists(ID3D12CommandQueue* This, UINT NumComm
     {
         int cmdListCount = 0;
         int targetListCount = (_depthCmdList == nullptr ? 0 : 1) + (_mvsCmdList == nullptr ? 0 : 1) +
-                              (_uiCmdList == nullptr ? 0 : 1) + (fg->NoHudless() ? 0 : 1);
+                              (_uiCmdList == nullptr ? 0 : 1) + (_distortionFieldCmdList == nullptr ? 0 : 1) +
+                              (fg->NoHudless() ? 0 : 1);
 
         for (size_t i = 0; i < NumCommandLists; i++)
         {
@@ -719,6 +721,13 @@ void ResTrack_Dx12::hkExecuteCommandLists(ID3D12CommandQueue* This, UINT NumComm
                 LOG_DEBUG("_uiCmdList: {:X}", (size_t) _uiCmdList);
                 cmdListCount++;
                 _uiCmdList = nullptr;
+            }
+
+            if (_distortionFieldCmdList != nullptr && _distortionFieldCmdList == ppCommandLists[i])
+            {
+                LOG_DEBUG("_distortionFieldCmdList: {:X}", (size_t) _distortionFieldCmdList);
+                cmdListCount++;
+                _distortionFieldCmdList = nullptr;
             }
 
             if (_hudlessCmdList != nullptr && _hudlessCmdList == ppCommandLists[i])
@@ -1522,6 +1531,11 @@ void ResTrack_Dx12::hkExecuteBundle(ID3D12GraphicsCommandList* This, ID3D12Graph
             LOG_DEBUG("UI cmdlist[{}]: {:X}", index, (size_t) This);
             _uiCommandList[index] = This;
         }
+        else if (pCommandList == _distortionFieldCommandList[index])
+        {
+            LOG_DEBUG("DistortionField cmdlist[{}]: {:X}", index, (size_t) This);
+            _distortionFieldCommandList[index] = This;
+        }
     }
 
     o_ExecuteBundle(This, pCommandList);
@@ -1535,7 +1549,7 @@ void ResTrack_Dx12::hkClose(ID3D12GraphicsCommandList* This)
     if ((State::Instance().activeFgInput == FGInput::Upscaler || State::Instance().activeFgInput == FGInput::DLSSG) &&
         fg != nullptr &&
         (_depthCommandList[index] != nullptr || _mvsCommandList[index] != nullptr || _uiCommandList[index] != nullptr ||
-         _hudlessCommandList[index] != nullptr))
+         _hudlessCommandList[index] != nullptr || _distortionFieldCommandList[index] != nullptr))
     {
 
         if (fg->IsActive() && fg->TargetFrame() < fg->FrameCount())
@@ -1589,6 +1603,19 @@ void ResTrack_Dx12::hkClose(ID3D12GraphicsCommandList* This)
 
                     _uiCmdList = _uiCommandList[index];
                     _uiCommandList[index] = nullptr;
+                }
+            }
+
+            if (!fg->DistortionFieldReady())
+            {
+                if (This == _distortionFieldCommandList[index])
+                {
+                    LOG_DEBUG("DistortionField CmdList: {:X}", (size_t) This);
+
+                    fg->SetDistortionFieldReady();
+
+                    _distortionFieldCmdList = _distortionFieldCommandList[index];
+                    _distortionFieldCommandList[index] = nullptr;
                 }
             }
         }
@@ -1870,6 +1897,7 @@ void ResTrack_Dx12::ClearPossibleHudless()
     _depthCmdList = nullptr;
     _mvsCmdList = nullptr;
     _uiCmdList = nullptr;
+    _distortionFieldCmdList = nullptr;
 }
 
 void ResTrack_Dx12::SetDepthCmdList(ID3D12GraphicsCommandList* cmdList)
@@ -1902,6 +1930,17 @@ void ResTrack_Dx12::SetUICmdList(ID3D12GraphicsCommandList* cmdList)
         auto index = fg->FrameCount() % BUFFER_COUNT;
         LOG_DEBUG("cmdList[{}]: {:X}", index, (size_t) cmdList);
         _uiCommandList[index] = cmdList;
+    }
+}
+
+void ResTrack_Dx12::SetDistortionFieldCmdList(ID3D12GraphicsCommandList* cmdList)
+{
+    auto fg = State::Instance().currentFG;
+    if (fg != nullptr && fg->IsActive())
+    {
+        auto index = fg->FrameCount() % BUFFER_COUNT;
+        LOG_DEBUG("cmdList[{}]: {:X}", index, (size_t) cmdList);
+        _distortionFieldCommandList[index] = cmdList;
     }
 }
 

@@ -439,6 +439,8 @@ void IFGFeature_Dx12::SetHudlessReady() { _hudlessReady[GetIndex()] = true; }
 
 void IFGFeature_Dx12::SetUIReady() { _uiReady[GetIndex()] = true; }
 
+void IFGFeature_Dx12::SetDistortionFieldReady() { _distortionFieldReady[GetIndex()] = true; }
+
 void IFGFeature_Dx12::SetHudlessDispatchReady() { _hudlessDispatchReady[GetIndex()] = true; }
 
 void IFGFeature_Dx12::Present()
@@ -448,12 +450,14 @@ void IFGFeature_Dx12::Present()
     _depthReady[fIndex] = false;
     _hudlessReady[fIndex] = false;
     _uiReady[fIndex] = false;
+    _distortionFieldReady[fIndex] = false;
     _hudlessDispatchReady[fIndex] = false;
 }
 
 bool IFGFeature_Dx12::VelocityReady() { return _velocityReady[GetIndex()]; }
 bool IFGFeature_Dx12::DepthReady() { return _depthReady[GetIndex()]; }
 bool IFGFeature_Dx12::UIReady() { return _uiReady[GetIndex()]; }
+bool IFGFeature_Dx12::DistortionFieldReady() { return _distortionFieldReady[GetIndex()]; }
 
 bool IFGFeature_Dx12::HudlessReady() { return _hudlessReady[GetIndex()]; }
 
