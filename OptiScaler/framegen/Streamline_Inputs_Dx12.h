@@ -15,12 +15,6 @@ class Sl_Inputs_Dx12
     bool depthSent = false;
     bool hudlessSent = false;
     bool mvsSent = false;
-    bool uiSent = false;
-    bool uiRequired = false;
-    bool distortionFieldSent = false;
-    bool distortionFieldRequired = false;
-
-    bool allRequiredSent = false;
 
     bool dispatched = false;
 
@@ -35,7 +29,10 @@ class Sl_Inputs_Dx12
     bool reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCommandList* cmdBuffer, uint32_t frameId);
     void reportEngineType(sl::EngineType type) { engineType = type; };
     bool dispatchFG(ID3D12GraphicsCommandList* cmdBuffer);
-    bool readyForDispatch() const { return allRequiredSent; };
+
+    // A minimum of required inputs
+    // If we are missing any by the time of present, then we have have bigger issues
+    bool readyForDispatch() const { return hudlessSent && depthSent && mvsSent; };
 
     // TODO: some shutdown and cleanup methods
 };

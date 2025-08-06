@@ -187,28 +187,16 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
     {
         LOG_TRACE("UIColorAndAlpha lifecycle: {}", magic_enum::enum_name(tag.lifecycle));
 
-        // uiSent = true;
-
         ResTrack_Dx12::SetUICmdList(cmdBuffer);
 
         auto uiResource = (ID3D12Resource*) tag.resource->native;
 
         const auto copy = alwaysCopy ? true : tag.lifecycle == sl::eOnlyValidNow;
         fgOutput->SetUI(cmdBuffer, uiResource, (D3D12_RESOURCE_STATES) tag.resource->state, copy);
-
-        // Assumes that the game won't stop sending it once it starts.
-        // dispatchFG will stop getting called if this assumption is not true
-        if (!uiRequired)
-        {
-            uiSent = false;
-            uiRequired = true;
-        }
     }
     else if (tag.type == sl::kBufferTypeBidirectionalDistortionField)
     {
         LOG_TRACE("DistortionField lifecycle: {}", magic_enum::enum_name(tag.lifecycle));
-
-        // distortionFieldSent = true;
 
         ResTrack_Dx12::SetDistortionFieldCmdList(cmdBuffer);
 
@@ -217,24 +205,7 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
         const auto copy = alwaysCopy ? true : tag.lifecycle == sl::eOnlyValidNow;
         fgOutput->SetDistortionField(cmdBuffer, distortionFieldResource, (D3D12_RESOURCE_STATES) tag.resource->state,
                                      copy);
-
-        // Assumes that the game won't stop sending it once it starts.
-        // dispatchFG will stop getting called if this assumption is not true
-        // if (!distortionFieldRequired)
-        //{
-        //    distortionFieldSent = false;
-        //    distortionFieldRequired = true;
-        //}
     }
-
-    // Will trigger frame count update on the next call to reportResource
-    allRequiredSent =
-        hudlessSent && depthSent && mvsSent /* && (uiRequired && uiSent || !uiRequired) && (distortionFieldRequired &&
-                                               distortionFieldSent || !distortionFieldRequired) */
-        ;
-
-    // if (allRequiredSent)
-    //     State::Instance().slFGInputs.dispatchFG((ID3D12GraphicsCommandList*) cmdBuffer);
 
     return true;
 }
@@ -244,8 +215,6 @@ bool Sl_Inputs_Dx12::dispatchFG(ID3D12GraphicsCommandList* cmdBuffer)
     depthSent = false;
     hudlessSent = false;
     mvsSent = false;
-    // uiSent = false;
-    // distortionFieldSent = false;
 
     dispatched = true;
 
