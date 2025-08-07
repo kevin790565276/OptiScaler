@@ -21,7 +21,6 @@ class FSRFG_Dx12 : public virtual IFGFeature_Dx12
     feature_version Version() override final;
     bool NeedsCommandlistExecution() override final { return true; }
 
-
     // IFGFeature_Dx12
     bool CreateSwapchain(IDXGIFactory* factory, ID3D12CommandQueue* cmdQueue, DXGI_SWAP_CHAIN_DESC* desc,
                          IDXGISwapChain** swapChain) override final;

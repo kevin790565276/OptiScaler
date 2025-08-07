@@ -25,11 +25,11 @@
 #define STRINGIZE(s) STRINGIZE_(s)
 
 #define VER_MAJOR_VERSION 0
-#define VER_MINOR_VERSION 7
-#define VER_HOTFIX_VERSION 8
-#define VER_BUILD_NUMBER 0
+#define VER_MINOR_VERSION 8
+#define VER_HOTFIX_VERSION 0
+#define VER_BUILD_NUMBER 1
 
-// #define VER_PRE_RELEASE
+#define VER_PRE_RELEASE
 
 #define VER_FILE_VERSION VER_MAJOR_VERSION, VER_MINOR_VERSION, VER_HOTFIX_VERSION, VER_BUILD_NUMBER
 #define VER_FILE_VERSION_STR                                                                                           \
