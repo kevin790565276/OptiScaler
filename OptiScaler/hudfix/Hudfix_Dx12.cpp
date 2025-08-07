@@ -333,7 +333,6 @@ void Hudfix_Dx12::HudlessFound(ID3D12GraphicsCommandList* cmdList)
     _captureCounter[GetIndex()] = 9999;
 
     auto fg = State::Instance().currentFG;
-
     if (fg != nullptr)
         fg->Dispatch();
 

@@ -2,9 +2,37 @@
 
 #include <pch.h>
 
-#define DEFINE_NAME_VECTORS(varName, libName)                                                                          \
-    inline std::vector<std::string> varName##Names = { libName ".dll", libName };                                      \
-    inline std::vector<std::wstring> varName##NamesW = { L##libName L".dll", L##libName };
+#include <proxies/KernelBase_Proxy.h>
+
+//#define DEFINE_NAME_VECTORS(varName, libName)                                                                          \
+//    inline std::vector<std::string> varName##Names = { libName ".dll", libName };                                      \
+//    inline std::vector<std::wstring> varName##NamesW = { L##libName L".dll", L##libName };
+
+#define DEFINE_NAME_VECTORS(varName, ...)                                                                              \
+    inline std::vector<std::string> varName##Names = []                                                                \
+    {                                                                                                                  \
+        std::vector<std::string> v;                                                                                    \
+        const char* libs[] = { __VA_ARGS__ };                                                                          \
+        for (auto lib : libs)                                                                                          \
+        {                                                                                                              \
+            v.emplace_back(std::string(lib) + ".dll");                                                                 \
+            v.emplace_back(std::string(lib));                                                                          \
+        }                                                                                                              \
+        return v;                                                                                                      \
+    }();                                                                                                               \
+    inline std::vector<std::wstring> varName##NamesW = []                                                              \
+    {                                                                                                                  \
+        std::vector<std::wstring> v;                                                                                   \
+        const char* libs[] = { __VA_ARGS__ };                                                                          \
+        for (auto lib : libs)                                                                                          \
+        {                                                                                                              \
+            std::string narrow(lib);                                                                                   \
+            std::wstring wide(narrow.begin(), narrow.end());                                                           \
+            v.emplace_back(wide + L".dll");                                                                            \
+            v.emplace_back(wide);                                                                                      \
+        }                                                                                                              \
+        return v;                                                                                                      \
+    }();
 
 inline std::vector<std::string> dllNames;
 inline std::vector<std::wstring> dllNamesW;
@@ -112,7 +140,7 @@ DEFINE_NAME_VECTORS(dx12, "d3d12");
 DEFINE_NAME_VECTORS(dxgi, "dxgi");
 DEFINE_NAME_VECTORS(vk, "vulkan-1");
 
-DEFINE_NAME_VECTORS(nvngx, "nvngx");
+DEFINE_NAME_VECTORS(nvngx, "nvngx", "_nvngx");
 DEFINE_NAME_VECTORS(nvngxDlss, "nvngx_dlss");
 DEFINE_NAME_VECTORS(nvapi, "nvapi64");
 DEFINE_NAME_VECTORS(slInterposer, "sl.interposer");
@@ -159,4 +187,32 @@ inline static bool CheckDllNameW(std::wstring* dllName, std::vector<std::wstring
     }
 
     return false;
+}
+
+inline static HMODULE GetDllNameModule(std::vector<std::string>* namesList)
+{
+    for (size_t i = 0; i < namesList->size(); i++)
+    {
+        auto name = namesList->at(i);
+        auto module = KernelBaseProxy::GetModuleHandleA_()(name.c_str());
+
+        if (module != nullptr)
+            return module;
+    }
+
+    return nullptr;
+}
+
+inline static HMODULE GetDllNameWModule(std::vector<std::wstring>* namesList)
+{
+    for (size_t i = 0; i < namesList->size(); i++)
+    {
+        auto name = namesList->at(i);
+        auto module = KernelBaseProxy::GetModuleHandleW_()(name.c_str());
+
+        if (module != nullptr)
+            return module;
+    }
+
+    return nullptr;
 }

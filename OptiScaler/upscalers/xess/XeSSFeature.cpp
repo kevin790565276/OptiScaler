@@ -87,6 +87,9 @@ bool XeSSFeature::InitXeSS(ID3D12Device* device, const NVSDK_NGX_Parameter* InPa
         LOG_DEBUG("xessParams.initFlags (ReactiveMaskActive) {0:b}", xessParams.initFlags);
     }
 
+    _xessInitFlags = xessParams.initFlags;
+    LOG_DEBUG("_xessInitFlags: {}", _xessInitFlags);
+
     switch (PerfQualityValue())
     {
     case NVSDK_NGX_PerfQuality_Value_UltraPerformance:

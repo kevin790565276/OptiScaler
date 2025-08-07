@@ -157,6 +157,8 @@ bool XeSSFeature_Vk::Init(VkInstance InInstance, VkPhysicalDevice InPD, VkDevice
         LOG_DEBUG("xessParams.initFlags (ReactiveMaskActive) {0:b}", xessParams.initFlags);
     }
 
+    _xessInitFlags = xessParams.initFlags;
+
     switch (PerfQualityValue())
     {
     case NVSDK_NGX_PerfQuality_Value_UltraPerformance:
@@ -513,11 +515,20 @@ bool XeSSFeature_Vk::Evaluate(VkCommandBuffer InCmdBuffer, NVSDK_NGX_Parameter* 
     bool supportsFloatResponsivePixelMask = Version() >= feature_version { 2, 0, 1 };
     NVSDK_NGX_Resource_VK* paramReactiveMask = nullptr;
 
-    if (supportsFloatResponsivePixelMask &&
-        InParameters->Get("FSR.reactive", (void**) &paramReactiveMask) == NVSDK_NGX_Result_Success)
+    if (InParameters->Get("FSR.reactive", (void**) &paramReactiveMask) == NVSDK_NGX_Result_Success)
     {
-        if (!Config::Instance()->DisableReactiveMask.value_or(true))
+        if (!Config::Instance()->DisableReactiveMask.value_or(!supportsFloatResponsivePixelMask))
+        {
+            if ((_xessInitFlags & XESS_INIT_FLAG_RESPONSIVE_PIXEL_MASK) == 0)
+            {
+                Config::Instance()->DisableReactiveMask = false;
+                LOG_WARN("Reactive mask exist but not enabled, enabling it!");
+                State::Instance().changeBackend[_handle->Id] = true;
+                return true;
+            }
+
             params.responsivePixelMaskTexture = NV_to_XeSS(paramReactiveMask);
+        }
     }
     else
     {
@@ -526,20 +537,26 @@ bool XeSSFeature_Vk::Evaluate(VkCommandBuffer InCmdBuffer, NVSDK_NGX_Parameter* 
             paramReactiveMask != nullptr)
         {
             LOG_DEBUG("Input Bias mask exist..");
-            Config::Instance()->DisableReactiveMask = false;
 
-            if (!Config::Instance()->DisableReactiveMask.value_or(!supportsFloatResponsivePixelMask))
-                params.responsivePixelMaskTexture = NV_to_XeSS(paramReactiveMask);
-        }
-        else
-        {
             if (!Config::Instance()->DisableReactiveMask.value_or(true))
             {
-                LOG_WARN("Bias mask not exist and its enabled in config, it may cause problems!!");
-                Config::Instance()->DisableReactiveMask = true;
-                State::Instance().changeBackend[_handle->Id] = true;
-                return true;
+                if ((_xessInitFlags & XESS_INIT_FLAG_RESPONSIVE_PIXEL_MASK) == 0)
+                {
+                    Config::Instance()->DisableReactiveMask = false;
+                    LOG_WARN("Reactive mask exist but not enabled, enabling it!");
+                    State::Instance().changeBackend[_handle->Id] = true;
+                    return true;
+                }
+
+                params.responsivePixelMaskTexture = NV_to_XeSS(paramReactiveMask);
             }
+        }
+        else if ((_xessInitFlags & XESS_INIT_FLAG_RESPONSIVE_PIXEL_MASK) > 0)
+        {
+            LOG_WARN("Bias mask not exist and its enabled in config, it may cause problems!!");
+            Config::Instance()->DisableReactiveMask = true;
+            State::Instance().changeBackend[_handle->Id] = true;
+            return true;
         }
     }
 

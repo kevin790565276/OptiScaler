@@ -52,6 +52,7 @@ class XeSSFeature : public virtual IFeature
   protected:
     xess_context_handle_t _xessContext = nullptr;
 
+    uint32_t _xessInitFlags = 0;
     int dumpCount = 0;
 
     bool InitXeSS(ID3D12Device* device, const NVSDK_NGX_Parameter* InParameters);

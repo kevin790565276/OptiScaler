@@ -7,7 +7,6 @@
 #include <future>
 #include <hooks/HooksDx.h>
 #include <hudfix/Hudfix_Dx12.h>
-#include <resource_tracking/ResTrack_dx12.h>
 // #define USE_QUEUE_FOR_FG
 
 typedef struct FfxSwapchainFramePacingTuning
@@ -241,8 +240,6 @@ bool FSRFG_Dx12::Dispatch()
             LOG_ERROR("_hudlessCommandList[fIndex]->Reset error: {:X}", (UINT) result);
             return false;
         }
-
-        ResTrack_Dx12::ClearFoundCmdLists();
 
         dfgPrepare.commandList = _commandList[fIndex];
 

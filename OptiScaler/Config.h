@@ -370,8 +370,6 @@ class Config
     CustomOptional<int> FGHUDLimit { 1 };
     CustomOptional<bool> FGHUDFixExtended { false };
     CustomOptional<bool> FGImmediateCapture { false };
-    CustomOptional<bool> FGHudfixHalfSync { false };
-    CustomOptional<bool> FGHudfixFullSync { false };
     CustomOptional<bool> FGDontUseSwapchainBuffers { false };
     CustomOptional<bool> FGRelaxedResolutionCheck { false };
 

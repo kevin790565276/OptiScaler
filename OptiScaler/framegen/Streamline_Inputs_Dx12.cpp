@@ -165,7 +165,8 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         depthSent = true;
 
-        ResTrack_Dx12::SetDepthCmdList(cmdBuffer);
+        ResTrack_Dx12::SetInputsCmdList(cmdBuffer);
+        //ResTrack_Dx12::SetDepthCmdList(cmdBuffer);
 
         auto depthResource = (ID3D12Resource*) tag.resource->native;
 

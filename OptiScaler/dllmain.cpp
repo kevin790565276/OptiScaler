@@ -659,7 +659,7 @@ static void CheckWorkingMode()
             {
                 LOG_DEBUG("Check for dxgi");
                 HMODULE dxgiModule = nullptr;
-                dxgiModule = KernelBaseProxy::GetModuleHandleW_()(L"dxgi.dll");
+                dxgiModule = GetDllNameWModule(&dxgiNamesW);
                 if (dxgiModule != nullptr)
                 {
                     LOG_DEBUG("dxgi.dll already in memory");
@@ -696,7 +696,7 @@ static void CheckWorkingMode()
 
                 LOG_DEBUG("Check for d3d12");
                 HMODULE d3d12Module = nullptr;
-                d3d12Module = KernelBaseProxy::GetModuleHandleW_()(L"d3d12.dll");
+                d3d12Module = GetDllNameWModule(&dx12NamesW);
                 if (Config::Instance()->OverlayMenu.value() && d3d12Module != nullptr)
                 {
                     LOG_DEBUG("d3d12.dll already in memory");
@@ -717,7 +717,7 @@ static void CheckWorkingMode()
             }
 
             // DirectX 11
-            d3d11Module = KernelBaseProxy::GetModuleHandleW_()(L"d3d11.dll");
+            d3d11Module = GetDllNameWModule(&dx11NamesW);
             if (Config::Instance()->OverlayMenu.value() && d3d11Module != nullptr)
             {
                 LOG_DEBUG("d3d11.dll already in memory");
@@ -725,9 +725,9 @@ static void CheckWorkingMode()
             }
 
             // Vulkan
-            vulkanModule = KernelBaseProxy::GetModuleHandleW_()(L"vulkan-1.dll");
+            vulkanModule = GetDllNameWModule(&vkNamesW);
             if ((State::Instance().isRunningOnDXVK || State::Instance().isRunningOnLinux) && vulkanModule == nullptr)
-                vulkanModule = KernelBaseProxy::LoadLibraryExW_()(L"vulkan-1.dll", NULL, 0);
+                vulkanModule = KernelBaseProxy::LoadLibraryExW_()(vkNamesW[0].c_str(), NULL, 0);
 
             if (vulkanModule != nullptr)
             {
@@ -745,7 +745,7 @@ static void CheckWorkingMode()
 
             // NVAPI
             HMODULE nvapi64 = nullptr;
-            nvapi64 = KernelBaseProxy::GetModuleHandleW_()(L"nvapi64.dll");
+            nvapi64 = GetDllNameWModule(&nvapiNamesW);
             if (nvapi64 != nullptr)
             {
                 LOG_DEBUG("nvapi64.dll already in memory");
@@ -770,7 +770,7 @@ static void CheckWorkingMode()
 
             // hook streamline right away if it's already loaded
             HMODULE slModule = nullptr;
-            slModule = KernelBaseProxy::GetModuleHandleW_()(L"sl.interposer.dll");
+            slModule = GetDllNameWModule(&slInterposerNamesW);
             if (slModule != nullptr)
             {
                 LOG_DEBUG("sl.interposer.dll already in memory");
@@ -778,7 +778,7 @@ static void CheckWorkingMode()
             }
 
             HMODULE slDlss = nullptr;
-            slDlss = KernelBaseProxy::GetModuleHandleW_()(L"sl.dlss.dll");
+            slDlss = GetDllNameWModule(&slDlssNamesW);
             if (slDlss != nullptr)
             {
                 LOG_DEBUG("sl.dlss.dll already in memory");
@@ -786,7 +786,7 @@ static void CheckWorkingMode()
             }
 
             HMODULE slDlssg = nullptr;
-            slDlssg = KernelBaseProxy::GetModuleHandleW_()(L"sl.dlss_g.dll");
+            slDlssg = GetDllNameWModule(&slDlssgNamesW);
             if (slDlssg != nullptr)
             {
                 LOG_DEBUG("sl.dlss_g.dll already in memory");
@@ -794,7 +794,7 @@ static void CheckWorkingMode()
             }
 
             HMODULE slReflex = nullptr;
-            slReflex = KernelBaseProxy::GetModuleHandleW_()(L"sl.reflex.dll");
+            slReflex = GetDllNameWModule(&slReflexNamesW);
             if (slReflex != nullptr)
             {
                 LOG_DEBUG("sl.reflex.dll already in memory");
@@ -802,7 +802,7 @@ static void CheckWorkingMode()
             }
 
             HMODULE slCommon = nullptr;
-            slCommon = KernelBaseProxy::GetModuleHandleW_()(L"sl.common.dll");
+            slCommon = GetDllNameWModule(&slCommonNamesW);
             if (slCommon != nullptr)
             {
                 LOG_DEBUG("sl.common.dll already in memory");
@@ -811,7 +811,7 @@ static void CheckWorkingMode()
 
             // XeSS
             HMODULE xessModule = nullptr;
-            xessModule = KernelBaseProxy::GetModuleHandleW_()(L"libxess.dll");
+            xessModule = GetDllNameWModule(&xessNamesW);
             if (xessModule != nullptr)
             {
                 LOG_DEBUG("libxess.dll already in memory");
@@ -819,7 +819,7 @@ static void CheckWorkingMode()
             }
 
             HMODULE xessDx11Module = nullptr;
-            xessDx11Module = KernelBaseProxy::GetModuleHandleW_()(L"libxess_dx11.dll");
+            xessDx11Module = GetDllNameWModule(&xessDx11NamesW);
             if (xessDx11Module != nullptr)
             {
                 LOG_DEBUG("libxess_dx11.dll already in memory");
@@ -828,10 +828,7 @@ static void CheckWorkingMode()
 
             // NVNGX
             HMODULE nvngxModule = nullptr;
-            nvngxModule = KernelBaseProxy::GetModuleHandleW_()(L"_nvngx.dll");
-            if (nvngxModule == nullptr)
-                nvngxModule = KernelBaseProxy::GetModuleHandleW_()(L"nvngx.dll");
-
+            nvngxModule = GetDllNameWModule(&nvngxNamesW);
             if (nvngxModule != nullptr)
             {
                 LOG_DEBUG("nvngx.dll already in memory");
@@ -840,7 +837,7 @@ static void CheckWorkingMode()
 
             // FFX Dx12
             HMODULE ffxDx12Module = nullptr;
-            ffxDx12Module = KernelBaseProxy::GetModuleHandleW_()(L"amd_fidelityfx_dx12.dll");
+            ffxDx12Module = GetDllNameWModule(&ffxDx12NamesW);
             if (ffxDx12Module != nullptr)
             {
                 LOG_DEBUG("amd_fidelityfx_dx12.dll already in memory");
@@ -849,7 +846,7 @@ static void CheckWorkingMode()
 
             // FFX Vulkan
             HMODULE ffxVkModule = nullptr;
-            ffxVkModule = KernelBaseProxy::GetModuleHandleW_()(L"amd_fidelityfx_vk.dll");
+            ffxVkModule = GetDllNameWModule(&ffxVkNamesW);
             if (ffxVkModule != nullptr)
             {
                 LOG_DEBUG("amd_fidelityfx_vk.dll already in memory");
@@ -897,7 +894,7 @@ static void CheckWorkingMode()
             // For Agility SDK Upgrade
             if (Config::Instance()->FsrAgilitySDKUpgrade.value_or_default())
             {
-                RunAgilityUpgrade(KernelBaseProxy::GetModuleHandleW_()(L"d3d12.dll"));
+                RunAgilityUpgrade(GetDllNameWModule(&dx12NamesW));
             }
 
             // Intel Extension Framework
@@ -1023,7 +1020,7 @@ bool isNvidia()
 {
     bool nvidiaDetected = false;
     bool loadedHere = false;
-    auto nvapiModule = KernelBaseProxy::GetModuleHandleW_()(L"nvapi64.dll");
+    auto nvapiModule = GetDllNameWModule(&nvapiNamesW);
 
     if (!nvapiModule)
     {
@@ -1225,11 +1222,11 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
         if (Config::Instance()->EnableFsr2Inputs.value_or_default())
         {
 
-            handle = KernelBaseProxy::GetModuleHandleW_()(fsr2NamesW[0].c_str());
+            handle = GetDllNameWModule(&fsr2NamesW);
             if (handle != nullptr)
                 HookFSR2Inputs(handle);
 
-            handle = KernelBaseProxy::GetModuleHandleW_()(fsr2BENamesW[0].c_str());
+            handle = GetDllNameWModule(&fsr2BENamesW);
             if (handle != nullptr)
                 HookFSR2Dx12Inputs(handle);
 
@@ -1240,11 +1237,11 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
 
         if (Config::Instance()->EnableFsr3Inputs.value_or_default())
         {
-            handle = KernelBaseProxy::GetModuleHandleW_()(fsr3NamesW[0].c_str());
+            handle = GetDllNameWModule(&fsr3NamesW);
             if (handle != nullptr)
                 HookFSR3Inputs(handle);
 
-            handle = KernelBaseProxy::GetModuleHandleW_()(fsr3BENamesW[0].c_str());
+            handle = GetDllNameWModule(&fsr3BENamesW);
             if (handle != nullptr)
                 HookFSR3Dx12Inputs(handle);
 

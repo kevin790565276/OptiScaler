@@ -245,10 +245,18 @@ bool XeSSFeatureDx12::Evaluate(ID3D12GraphicsCommandList* InCommandList, NVSDK_N
     InParameters->Get("FSR.reactive", &paramReactiveMask);
     bool supportsFloatResponsivePixelMask = Version() >= feature_version { 2, 0, 1 };
 
-    if (supportsFloatResponsivePixelMask && paramReactiveMask != nullptr)
+    if (paramReactiveMask != nullptr)
     {
-        if (!Config::Instance()->DisableReactiveMask.value_or(false))
+        if (!Config::Instance()->DisableReactiveMask.value_or(!supportsFloatResponsivePixelMask))
         {
+            if ((_xessInitFlags & XESS_INIT_FLAG_RESPONSIVE_PIXEL_MASK) == 0)
+            {
+                Config::Instance()->DisableReactiveMask = false;
+                LOG_WARN("Reactive mask exist but not enabled, enabling it!");
+                State::Instance().changeBackend[_handle->Id] = true;
+                return true;
+            }
+
             LOG_DEBUG("Using FSR reactive mask");
             params.pResponsivePixelMaskTexture = paramReactiveMask;
         }
@@ -259,40 +267,45 @@ bool XeSSFeatureDx12::Evaluate(ID3D12GraphicsCommandList* InCommandList, NVSDK_N
             NVSDK_NGX_Result_Success)
             InParameters->Get(NVSDK_NGX_Parameter_DLSS_Input_Bias_Current_Color_Mask, (void**) &paramReactiveMask);
 
-        if (!Config::Instance()->DisableReactiveMask.value_or(!supportsFloatResponsivePixelMask) && paramReactiveMask)
+        if (!Config::Instance()->DisableReactiveMask.value_or(true) && paramReactiveMask)
         {
             LOG_DEBUG("Input Bias mask exist..");
-            Config::Instance()->DisableReactiveMask = false;
+
+            if ((_xessInitFlags & XESS_INIT_FLAG_RESPONSIVE_PIXEL_MASK) == 0)
+            {
+                Config::Instance()->DisableReactiveMask = false;
+                LOG_WARN("Reactive mask exist but not enabled, enabling it!");
+                State::Instance().changeBackend[_handle->Id] = true;
+                return true;
+            }
 
             if (Config::Instance()->MaskResourceBarrier.has_value())
                 ResourceBarrier(InCommandList, params.pResponsivePixelMaskTexture,
                                 (D3D12_RESOURCE_STATES) Config::Instance()->MaskResourceBarrier.value(),
                                 D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
-            if (Config::Instance()->DlssReactiveMaskBias.value_or(0.0f) > 0.0f && Bias->IsInit() &&
+            if (Config::Instance()->DlssReactiveMaskBias.value_or_default() > 0.0f && Bias->IsInit() &&
                 Bias->CreateBufferResource(Device, paramReactiveMask, D3D12_RESOURCE_STATE_UNORDERED_ACCESS) &&
                 Bias->CanRender())
             {
                 Bias->SetBufferState(InCommandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
                 if (Bias->Dispatch(Device, InCommandList, paramReactiveMask,
-                                   Config::Instance()->DlssReactiveMaskBias.value_or(0.0f), Bias->Buffer()))
+                                   Config::Instance()->DlssReactiveMaskBias.value_or_default(), Bias->Buffer()))
                 {
                     Bias->SetBufferState(InCommandList, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
                     params.pResponsivePixelMaskTexture = Bias->Buffer();
                 }
             }
         }
-        else
-        {
-            if (!Config::Instance()->DisableReactiveMask.value_or(true))
-            {
-                LOG_WARN("Bias mask not exist and its enabled in config, it may cause problems!!");
-                Config::Instance()->DisableReactiveMask = true;
-                State::Instance().changeBackend[_handle->Id] = true;
-                return true;
-            }
-        }
+    }
+
+    if ((_xessInitFlags & XESS_INIT_FLAG_RESPONSIVE_PIXEL_MASK) > 0 && params.pResponsivePixelMaskTexture == nullptr)
+    {
+        LOG_WARN("Bias mask not exist and its enabled in config, it may cause problems!!");
+        Config::Instance()->DisableReactiveMask = true;
+        State::Instance().changeBackend[_handle->Id] = true;
+        return true;
     }
 
     _hasColor = params.pColorTexture != nullptr;

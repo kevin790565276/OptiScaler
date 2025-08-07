@@ -2939,30 +2939,6 @@ bool MenuCommon::RenderMenu()
                                 ShowHelpMarker("Use mutex to prevent desync of FG and crashes\n"
                                                "Disabling might improve the perf but decrase stability");
 
-                                bool halfSync = Config::Instance()->FGHudfixHalfSync.value_or_default();
-                                if (ImGui::Checkbox("FG Mutex Half Sync", &halfSync))
-                                {
-                                    Config::Instance()->FGHudfixHalfSync = halfSync;
-
-                                    if (halfSync)
-                                        Config::Instance()->FGHudfixFullSync = false;
-
-                                    State::Instance().FGchanged = true;
-                                }
-                                ShowHelpMarker("Release present sync mutex after presenting 1 frame");
-
-                                bool fullSync = Config::Instance()->FGHudfixFullSync.value_or_default();
-                                if (ImGui::Checkbox("FG Mutex Full Sync", &fullSync))
-                                {
-                                    Config::Instance()->FGHudfixFullSync = fullSync;
-
-                                    if (fullSync)
-                                        Config::Instance()->FGHudfixHalfSync = false;
-
-                                    State::Instance().FGchanged = true;
-                                }
-                                ShowHelpMarker("Release present sync mutex after presenting 2 frames");
-
                                 ImGui::TreePop();
                             }
 

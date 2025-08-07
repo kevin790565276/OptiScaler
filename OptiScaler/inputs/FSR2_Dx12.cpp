@@ -591,6 +591,7 @@ static Fsr212::FfxErrorCode ffxFsr2ContextDispatch_Dx12(Fsr212::FfxFsr2Context* 
     if (!Config::Instance()->UseFsr2Inputs.value_or_default())
     {
         _skipDispatch = true;
+        LOG_DEBUG("UseFsr2Inputs not enabled, skipping");
         auto result = o_ffxFsr2ContextDispatch_Dx12(context, dispatchDescription);
         _skipDispatch = false;
         return result;
@@ -655,7 +656,10 @@ ffxFsr2ContextDispatch_Pattern_Dx12(Fsr212::FfxFsr2Context* context,
 
     // Skip OptiScaler stuff
     if (!Config::Instance()->UseFsr2Inputs.value_or_default() || _skipDispatch)
+    {
+        LOG_DEBUG("UseFsr2Inputs not enabled, skipping");
         return o_ffxFsr2ContextDispatch_Pattern_Dx12(context, dispatchDescription);
+    }
 
     if (dispatchDescription == nullptr || context == nullptr || dispatchDescription->commandList == nullptr)
         return Fsr212::FFX_ERROR_INVALID_ARGUMENT;
@@ -718,6 +722,7 @@ static Fsr212::FfxErrorCode ffxFsr20ContextDispatch_Dx12(Fsr212::FfxFsr2Context*
     if (!Config::Instance()->UseFsr2Inputs.value_or_default())
     {
         _skipDispatch = true;
+        LOG_DEBUG("UseFsr2Inputs not enabled, skipping");
         auto result = o_ffxFsr20ContextDispatch_Dx12(context, dispatchDescription);
         _skipDispatch = false;
         return result;
@@ -786,7 +791,10 @@ static Fsr212::FfxErrorCode ffxFsr20ContextDispatch_Pattern_Dx12(Fsr212::FfxFsr2
 
     // Skip OptiScaler stuff
     if (!Config::Instance()->UseFsr2Inputs.value_or_default() || _skipDispatch)
+    {
+        LOG_DEBUG("UseFsr2Inputs not enabled, skipping");
         return o_ffxFsr20ContextDispatch_Pattern_Dx12(context, dispatchDescription);
+    }
 
     if (dispatchDescription == nullptr || context == nullptr || dispatchDescription->commandList == nullptr)
         return Fsr212::FFX_ERROR_INVALID_ARGUMENT;
@@ -847,7 +855,10 @@ static Fsr212::FfxErrorCode ffxFsr2TinyContextDispatch_Dx12(Fsr212::FfxFsr2Conte
 
     // Skip OptiScaler stuff
     if (!Config::Instance()->UseFsr2Inputs.value_or_default())
+    {
+        LOG_DEBUG("UseFsr2Inputs not enabled, skipping");
         return o_ffxFsr2TinyContextDispatch_Dx12(context, dispatchDescription);
+    }
 
     if (dispatchDescription == nullptr || context == nullptr || dispatchDescription->commandList == nullptr)
         return Fsr212::FFX_ERROR_INVALID_ARGUMENT;

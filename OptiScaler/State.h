@@ -48,7 +48,7 @@ typedef struct CapturedHudlessInfo
 {
     UINT64 usageCount = 1;
     bool enabled = true;
-};
+} captured_hudless_info;
 
 class State
 {

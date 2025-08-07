@@ -12,6 +12,8 @@ class XeSSFeature_Dx11 : public virtual IFeature_Dx11
 
   protected:
     xess_context_handle_t _xessContext = nullptr;
+
+    uint32_t _xessInitFlags = 0;
     int dumpCount = 0;
 
   public:

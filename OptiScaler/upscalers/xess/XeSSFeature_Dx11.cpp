@@ -125,6 +125,8 @@ bool XeSSFeature_Dx11::Init(ID3D11Device* InDevice, ID3D11DeviceContext* InConte
         LOG_DEBUG("xessParams.initFlags (ReactiveMaskActive) {0:b}", xessParams.initFlags);
     }
 
+    _xessInitFlags = xessParams.initFlags;
+
     switch (PerfQualityValue())
     {
     case NVSDK_NGX_PerfQuality_Value_UltraPerformance:
@@ -433,26 +435,28 @@ bool XeSSFeature_Dx11::Evaluate(ID3D11DeviceContext* DeviceContext, NVSDK_NGX_Pa
     //    LOG_DEBUG("AutoExposure is always enabled for XeSS Dx11!");
     //}
 
-    if (!Config::Instance()->DisableReactiveMask.value_or(true))
-    {
-        ID3D11Resource* paramReactiveMask = nullptr;
-        if (InParameters->Get(NVSDK_NGX_Parameter_DLSS_Input_Bias_Current_Color_Mask, &paramReactiveMask) !=
-            NVSDK_NGX_Result_Success)
-            InParameters->Get(NVSDK_NGX_Parameter_DLSS_Input_Bias_Current_Color_Mask, (void**) &paramReactiveMask);
+    ID3D11Resource* paramReactiveMask = nullptr;
+    if (InParameters->Get(NVSDK_NGX_Parameter_DLSS_Input_Bias_Current_Color_Mask, &paramReactiveMask) !=
+        NVSDK_NGX_Result_Success)
+        InParameters->Get(NVSDK_NGX_Parameter_DLSS_Input_Bias_Current_Color_Mask, (void**) &paramReactiveMask);
 
+    bool supportsFloatResponsivePixelMask = Version() >= feature_version { 2, 0, 1 };
+
+    if (!Config::Instance()->DisableReactiveMask.value_or(true) && supportsFloatResponsivePixelMask)
+    {
         if (paramReactiveMask)
         {
             LOG_DEBUG("Input Bias mask exist..");
-            Config::Instance()->DisableReactiveMask = false;
             params.pResponsivePixelMaskTexture = paramReactiveMask;
         }
-        else
-        {
-            LOG_WARN("Bias mask not exist and its enabled in config, it may cause problems!!");
-            Config::Instance()->DisableReactiveMask = true;
-            State::Instance().changeBackend[_handle->Id] = true;
-            return true;
-        }
+    }
+
+    if ((_xessInitFlags & XESS_INIT_FLAG_RESPONSIVE_PIXEL_MASK) > 0 && params.pResponsivePixelMaskTexture == nullptr)
+    {
+        LOG_WARN("Bias mask not exist and its enabled in config, it may cause problems!!");
+        Config::Instance()->DisableReactiveMask = true;
+        State::Instance().changeBackend[_handle->Id] = true;
+        return true;
     }
 
     _hasColor = params.pColorTexture != nullptr;

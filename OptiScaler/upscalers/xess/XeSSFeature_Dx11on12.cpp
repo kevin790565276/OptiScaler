@@ -244,22 +244,36 @@ bool XeSSFeatureDx11on12::Evaluate(ID3D11DeviceContext* InDeviceContext, NVSDK_N
         params.pExposureScaleTexture = dx11Exp.Dx12Resource;
         _hasExposure = params.pExposureScaleTexture != nullptr;
 
+        bool supportsFloatResponsivePixelMask = Version() >= feature_version { 2, 0, 1 };
+
         if (dx11Reactive.Dx12Resource != nullptr)
         {
-            if (Config::Instance()->DlssReactiveMaskBias.value_or(0.0f) > 0.0f && Bias->IsInit() &&
-                Bias->CreateBufferResource(State::Instance().currentD3D12Device, dx11Reactive.Dx12Resource,
-                                           D3D12_RESOURCE_STATE_UNORDERED_ACCESS) &&
-                Bias->CanRender())
+            if (!Config::Instance()->DisableReactiveMask.value_or(true) && supportsFloatResponsivePixelMask)
             {
-                Bias->SetBufferState(cmdList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-
-                if (Bias->Dispatch(State::Instance().currentD3D12Device, cmdList, dx11Reactive.Dx12Resource,
-                                   Config::Instance()->DlssReactiveMaskBias.value_or(0.0f), Bias->Buffer()))
+                if (Config::Instance()->DlssReactiveMaskBias.value_or_default() > 0.0f && Bias->IsInit() &&
+                    Bias->CreateBufferResource(State::Instance().currentD3D12Device, dx11Reactive.Dx12Resource,
+                                               D3D12_RESOURCE_STATE_UNORDERED_ACCESS) &&
+                    Bias->CanRender())
                 {
-                    Bias->SetBufferState(cmdList, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-                    params.pResponsivePixelMaskTexture = Bias->Buffer();
+                    Bias->SetBufferState(cmdList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+                    if (Bias->Dispatch(State::Instance().currentD3D12Device, cmdList, dx11Reactive.Dx12Resource,
+                                       Config::Instance()->DlssReactiveMaskBias.value_or_default(), Bias->Buffer()))
+                    {
+                        Bias->SetBufferState(cmdList, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+                        params.pResponsivePixelMaskTexture = Bias->Buffer();
+                    }
                 }
             }
+        }
+
+        if ((_xessInitFlags & XESS_INIT_FLAG_RESPONSIVE_PIXEL_MASK) > 0 &&
+            params.pResponsivePixelMaskTexture == nullptr)
+        {
+            Config::Instance()->DisableReactiveMask = true;
+            LOG_WARN("Reactive mask not exist not enabled, disabling it!");
+            State::Instance().changeBackend[_handle->Id] = true;
+            return true;
         }
 
         float MVScaleX;
