@@ -280,6 +280,8 @@ static HRESULT hkFGPresent(void* This, UINT SyncInterval, UINT Flags)
         }
     }
 
+    State::Instance().slFGInputs.markLastSendAsRequired();
+
     // if (willPresent && State::Instance().activeFgInput == FGInput::DLSSG &&
     //     State::Instance().slFGInputs.readyForDispatch() && fg != nullptr)
     //{

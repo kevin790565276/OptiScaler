@@ -33,6 +33,7 @@ class Sl_Inputs_Dx12
     bool reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCommandList* cmdBuffer, uint32_t frameId);
     void reportEngineType(sl::EngineType type) { engineType = type; };
     bool dispatchFG(ID3D12GraphicsCommandList* cmdBuffer);
+    void markLastSendAsRequired();
 
     // A minimum of required inputs
     // If we are missing any by the time of present, then we have have bigger issues

@@ -194,14 +194,6 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         const auto copy = alwaysCopy ? true : tag.lifecycle == sl::eOnlyValidNow;
         fgOutput->SetUI(cmdBuffer, uiResource, (D3D12_RESOURCE_STATES) tag.resource->state, copy);
-
-        // Assumes that the game won't stop sending it once it starts.
-        // dispatchFG will stop getting called if this assumption is not true
-        if (!uiRequired)
-        {
-            uiSent = false;
-            uiRequired = true;
-        }
     }
     else if (tag.type == sl::kBufferTypeBidirectionalDistortionField)
     {
@@ -216,9 +208,6 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
         const auto copy = alwaysCopy ? true : tag.lifecycle == sl::eOnlyValidNow;
         fgOutput->SetDistortionField(cmdBuffer, distortionFieldResource, (D3D12_RESOURCE_STATES) tag.resource->state,
                                      copy);
-
-        // TODO: add distortionField required
-        // For example, if skipped dispatch because of field missing for a few frames, reset the requirement
     }
 
     if (readyForDispatch())
@@ -229,12 +218,6 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
 bool Sl_Inputs_Dx12::dispatchFG(ID3D12GraphicsCommandList* cmdBuffer)
 {
-    depthSent = false;
-    hudlessSent = false;
-    mvsSent = false;
-    uiSent = false;
-    distortionFieldSent = false;
-
     dispatched = true;
 
     auto fgOutput = reinterpret_cast<IFGFeature_Dx12*>(State::Instance().currentFG);
@@ -345,4 +328,16 @@ bool Sl_Inputs_Dx12::dispatchFG(ID3D12GraphicsCommandList* cmdBuffer)
     fgOutput->SetReset(slConstsRef.reset == sl::Boolean::eTrue);
 
     return fgOutput->Dispatch();
+}
+
+void Sl_Inputs_Dx12::markLastSendAsRequired()
+{
+    uiRequired = uiSent;
+    distortionFieldRequired = distortionFieldSent;
+
+    depthSent = false;
+    hudlessSent = false;
+    mvsSent = false;
+    uiSent = false;
+    distortionFieldSent = false;
 }
