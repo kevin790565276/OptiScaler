@@ -350,6 +350,7 @@ class Config
     CustomOptional<FGPreset> FGPreset { FGPreset::NoFG };
     CustomOptional<FGInput> FGInput { FGInput::NoFG };
     CustomOptional<FGOutput> FGOutput { FGOutput::NoFG };
+    CustomOptional<bool> DrawUIOverFG { false };
 
     // OptiFG
     CustomOptional<bool> FGEnabled { false };

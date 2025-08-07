@@ -78,11 +78,11 @@ bool FSRFG_Dx12::Dispatch()
 
     auto fIndex = GetIndex();
 
-    ffxConfigureDescFrameGenerationRegisterDistortionFieldResource distortionFieldDesc {};
-    distortionFieldDesc.header.type = FFX_API_CONFIGURE_DESC_TYPE_FRAMEGENERATION_REGISTERDISTORTIONRESOURCE;
-
     ffxConfigureDescFrameGeneration m_FrameGenerationConfig = {};
     m_FrameGenerationConfig.header.type = FFX_API_CONFIGURE_DESC_TYPE_FRAMEGENERATION;
+
+    ffxConfigureDescFrameGenerationRegisterDistortionFieldResource distortionFieldDesc {};
+    distortionFieldDesc.header.type = FFX_API_CONFIGURE_DESC_TYPE_FRAMEGENERATION_REGISTERDISTORTIONRESOURCE;
 
     if (!_noDistortionField[fIndex] && _paramDistortionField[fIndex].resource != nullptr)
     {
@@ -92,20 +92,40 @@ bool FSRFG_Dx12::Dispatch()
                                                                     _paramDistortionField[fIndex].getFfxApiState());
         _paramDistortionField[fIndex] = {};
 
+        distortionFieldDesc.header.pNext = m_FrameGenerationConfig.header.pNext;
         m_FrameGenerationConfig.header.pNext = &distortionFieldDesc.header;
     }
 
-    if (!_noHudless[fIndex] && _paramHudless[fIndex].resource != nullptr)
+    ffxConfigureDescFrameGenerationSwapChainRegisterUiResourceDX12 uiDesc {};
+    uiDesc.header.type = FFX_API_CONFIGURE_DESC_TYPE_FRAMEGENERATIONSWAPCHAIN_REGISTERUIRESOURCE_DX12;
+
+    if (!_noUi[fIndex] && _paramUi[fIndex].resource != nullptr)
+    {
+        LOG_TRACE("Using UI: {:X}", (size_t) _paramUi[fIndex].resource);
+
+        uiDesc.uiResource = ffxApiGetResourceDX12(_paramUi[fIndex].resource, _paramUi[fIndex].getFfxApiState());
+        // uiDesc.flags = FFX_FRAMEGENERATION_UI_COMPOSITION_FLAG_USE_PREMUL_ALPHA;
+
+        _paramUi[fIndex] = {};
+    }
+    else if (!_noHudless[fIndex] && _paramHudless[fIndex].resource != nullptr)
     {
         LOG_TRACE("Using hudless: {:X}", (size_t) _paramHudless[fIndex].resource);
-        auto state = m_FrameGenerationConfig.HUDLessColor =
+
+        uiDesc.uiResource = FfxApiResource({});
+        m_FrameGenerationConfig.HUDLessColor =
             ffxApiGetResourceDX12(_paramHudless[fIndex].resource, _paramHudless[fIndex].getFfxApiState());
-        _paramHudless[fIndex] = {};
+
+        // Reset of _paramHudless[fIndex] happens in DispatchCallback
+        // as we might use it in Preset to remove hud from swapchain
     }
     else
     {
+        uiDesc.uiResource = FfxApiResource({});
         m_FrameGenerationConfig.HUDLessColor = FfxApiResource({});
     }
+
+    FfxApiProxy::D3D12_Configure()(&_swapChainContext, &uiDesc.header);
 
     _lastHudlessFormat = m_FrameGenerationConfig.HUDLessColor.description.format;
 
@@ -284,7 +304,7 @@ bool FSRFG_Dx12::Dispatch()
 
 ffxReturnCode_t FSRFG_Dx12::DispatchCallback(ffxDispatchDescFrameGeneration* params)
 {
-    int fIndex = params->frameID % BUFFER_COUNT;
+    const int fIndex = params->frameID % BUFFER_COUNT;
 
     params->reset = (_reset != 0);
 
@@ -322,6 +342,9 @@ ffxReturnCode_t FSRFG_Dx12::DispatchCallback(ffxDispatchDescFrameGeneration* par
                   params->presentColor.description.format);
         State::Instance().FGchanged = true;
     }
+
+    if (_paramHudless[fIndex].resource != nullptr)
+        _paramHudless[fIndex] = {};
 
     auto dispatchResult = FfxApiProxy::D3D12_Dispatch()(&_fgContext, &params->header);
     LOG_DEBUG("D3D12_Dispatch result: {}, fIndex: {}", (UINT) dispatchResult, fIndex);

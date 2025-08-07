@@ -3069,6 +3069,11 @@ bool MenuCommon::RenderMenu()
                         if (fgOutput->IsActive())
                         {
                             ImGui::TextColored(ImVec4(0.f, 1.f, 0.25f, 1.f), "ON");
+
+                            // TODO: doesn't check if the UI is available, and doesn't save to config
+                            if (bool drawUIOverFG = Config::Instance()->DrawUIOverFG.value_or_default();
+                                ImGui::Checkbox("Draw UI over FG", &drawUIOverFG))
+                                Config::Instance()->DrawUIOverFG = drawUIOverFG;
                         }
                         else
                         {

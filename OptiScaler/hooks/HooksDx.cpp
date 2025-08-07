@@ -294,6 +294,15 @@ static HRESULT hkFGPresent(void* This, UINT SyncInterval, UINT Flags)
         Hudfix_Dx12::PresentStart();
     }
 
+    if (willPresent && fg != nullptr && fg->UsingUI())
+    {
+        ID3D12Resource* backBuffer = nullptr;
+        auto swapchain = ((IDXGISwapChain3*) This);
+        auto swapchainIndex = swapchain->GetCurrentBackBufferIndex();
+        swapchain->GetBuffer(swapchainIndex, IID_PPV_ARGS(&backBuffer));
+        fg->GetHudless(backBuffer, D3D12_RESOURCE_STATE_PRESENT);
+    }
+
     HRESULT result;
     result = o_FGSCPresent(This, SyncInterval, Flags);
     LOG_DEBUG("Result: {:X}", result);

@@ -73,8 +73,9 @@ class IFGFeature_Dx12 : public virtual IFGFeature
     Dx12Resource _paramDistortionField[BUFFER_COUNT] {};
     Dx12Resource _paramDistortionFieldCopy[BUFFER_COUNT] {};
 
-    ID3D12GraphicsCommandList* _commandList[BUFFER_COUNT] {};
-    ID3D12CommandAllocator* _commandAllocators[BUFFER_COUNT] {};
+    // One extra to copy things
+    ID3D12GraphicsCommandList* _commandList[BUFFER_COUNT + 1] {};
+    ID3D12CommandAllocator* _commandAllocators[BUFFER_COUNT + 1] {};
 
     bool CreateBufferResource(ID3D12Device* InDevice, ID3D12Resource* InSource, D3D12_RESOURCE_STATES InState,
                               ID3D12Resource** OutResource, bool UAV = false, bool depth = false);
@@ -114,6 +115,8 @@ class IFGFeature_Dx12 : public virtual IFGFeature
                bool makeCopy = false);
     void SetDistortionField(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* ui, D3D12_RESOURCE_STATES state,
                             bool makeCopy = false);
+
+    void GetHudless(ID3D12Resource* buffer, D3D12_RESOURCE_STATES bufferState);
 
     bool ExecuteCommandList(ID3D12CommandQueue* queue);
     ID3D12CommandList* GetCommandList();

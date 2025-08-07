@@ -112,6 +112,13 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
     if (fgOutput == nullptr || !Config::Instance()->FGEnabled.value_or_default())
         return false;
 
+    bool UIDisabled = !Config::Instance()->DrawUIOverFG.value_or_default();
+
+    if (tag.type == sl::kBufferTypeUIColorAndAlpha && UIDisabled)
+    {
+        return true;
+    }
+
     if (dispatched)
     {
         fgOutput->StartNewFrame();
@@ -188,12 +195,15 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         uiSent = true;
 
-        // ResTrack_Dx12::SetUICmdList(cmdBuffer);
+        if (uiRequired)
+        {
+            // ResTrack_Dx12::SetUICmdList(cmdBuffer);
 
-        auto uiResource = (ID3D12Resource*) tag.resource->native;
+            auto uiResource = (ID3D12Resource*) tag.resource->native;
 
-        const auto copy = alwaysCopy ? true : tag.lifecycle == sl::eOnlyValidNow;
-        fgOutput->SetUI(cmdBuffer, uiResource, (D3D12_RESOURCE_STATES) tag.resource->state, copy);
+            const auto copy = alwaysCopy ? true : tag.lifecycle == sl::eOnlyValidNow;
+            fgOutput->SetUI(cmdBuffer, uiResource, (D3D12_RESOURCE_STATES) tag.resource->state, copy);
+        }
     }
     else if (tag.type == sl::kBufferTypeBidirectionalDistortionField)
     {

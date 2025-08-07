@@ -361,6 +361,31 @@ void IFGFeature_Dx12::SetDistortionField(ID3D12GraphicsCommandList* cmdList, ID3
     }
 }
 
+void IFGFeature_Dx12::GetHudless(ID3D12Resource* buffer, D3D12_RESOURCE_STATES bufferState)
+{
+    if (!_commandAllocators[BUFFER_COUNT] || !_commandList[BUFFER_COUNT])
+        return;
+
+    auto allocator = _commandAllocators[BUFFER_COUNT];
+    auto result = allocator->Reset();
+    if (result != S_OK)
+        return;
+
+    result = _commandList[BUFFER_COUNT]->Reset(allocator, nullptr);
+    if (result != S_OK)
+        return;
+
+    // if (bufferState == D3D12_RESOURCE_STATE_PRESENT)
+    //{
+    // }
+
+    _commandList[BUFFER_COUNT]->CopyResource(buffer, _paramHudless[GetIndex()].resource);
+
+    _commandList[BUFFER_COUNT]->Close();
+    ID3D12CommandList* commandList = _commandList[BUFFER_COUNT];
+    _gameCommandQueue->ExecuteCommandLists(1, &commandList);
+}
+
 void IFGFeature_Dx12::CreateObjects(ID3D12Device* InDevice)
 {
     _device = InDevice;
@@ -374,7 +399,8 @@ void IFGFeature_Dx12::CreateObjects(ID3D12Device* InDevice)
     {
         HRESULT result;
 
-        for (size_t i = 0; i < BUFFER_COUNT; i++)
+        // One extra to copy things
+        for (size_t i = 0; i < BUFFER_COUNT + 1; i++)
         {
             ID3D12CommandAllocator* allocator = nullptr;
             result = InDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&allocator));
