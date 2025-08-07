@@ -558,7 +558,7 @@ static HRESULT hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Fla
     }
     else if (State::Instance().activeFgOutput == FGOutput::XeFG)
     {
-        fakenvapi::reportFGPresent(pSwapChain, fg != nullptr && fg->IsActive(), _frameCounter);
+        fakenvapi::reportFGPresent(pSwapChain, fg != nullptr && fg->IsActive(), _frameCounter % 2);
     }
 
     _frameCounter++;

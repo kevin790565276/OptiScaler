@@ -96,13 +96,18 @@ bool Sl_Inputs_Dx12::evaluateState(ID3D12Device* device)
     if (infiniteDepth)
         fgConstants.flags |= FG_Flags::InfiniteDepth;
 
-    Config::Instance()->FGXeFGDepthInverted = slConstsRef.depthInverted;
-    Config::Instance()->FGXeFGJitteredMV = slConstsRef.motionVectorsJittered;
-    Config::Instance()->FGXeFGHighResMV = slConstsRef.motionVectorsDilated;
-    LOG_DEBUG("XeFG DepthInverted: {}", Config::Instance()->FGXeFGDepthInverted.value_or_default());
-    LOG_DEBUG("XeFG JitteredMV: {}", Config::Instance()->FGXeFGJitteredMV.value_or_default());
-    LOG_DEBUG("XeFG HighResMV: {}", Config::Instance()->FGXeFGHighResMV.value_or_default());
-    Config::Instance()->SaveXeFG();
+    if (Config::Instance()->FGXeFGDepthInverted.value_or_default() != slConstsRef.depthInverted ||
+        Config::Instance()->FGXeFGJitteredMV.value_or_default() != slConstsRef.motionVectorsJittered ||
+        Config::Instance()->FGXeFGHighResMV.value_or_default() != slConstsRef.motionVectorsDilated)
+    {
+        Config::Instance()->FGXeFGDepthInverted = slConstsRef.depthInverted;
+        Config::Instance()->FGXeFGJitteredMV = slConstsRef.motionVectorsJittered;
+        Config::Instance()->FGXeFGHighResMV = slConstsRef.motionVectorsDilated;
+        LOG_DEBUG("XeFG DepthInverted: {}", Config::Instance()->FGXeFGDepthInverted.value_or_default());
+        LOG_DEBUG("XeFG JitteredMV: {}", Config::Instance()->FGXeFGJitteredMV.value_or_default());
+        LOG_DEBUG("XeFG HighResMV: {}", Config::Instance()->FGXeFGHighResMV.value_or_default());
+        Config::Instance()->SaveXeFG();
+    }
 
     fgOutput->EvaluateState(device, fgConstants);
 
@@ -146,7 +151,7 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         hudlessSent = true;
 
-        ResTrack_Dx12::SetHudlessCmdList(cmdBuffer);
+            ResTrack_Dx12::SetHudlessCmdList(cmdBuffer);
 
         auto hudlessResource = (ID3D12Resource*) tag.resource->native;
 
@@ -173,7 +178,7 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         depthSent = true;
 
-        ResTrack_Dx12::SetInputsCmdList(cmdBuffer);
+            ResTrack_Dx12::SetInputsCmdList(cmdBuffer);
         // ResTrack_Dx12::SetDepthCmdList(cmdBuffer);
 
         auto depthResource = (ID3D12Resource*) tag.resource->native;
