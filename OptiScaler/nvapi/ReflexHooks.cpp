@@ -272,7 +272,8 @@ void ReflexHooks::update(bool optiFg_FgState, bool isVulkan)
             LOG_DEBUG("DLSS FG no longer detected");
     }
 
-    if (optiFg_FgState || (_dlssgDetected && fakenvapi::isUsingFakenvapi()))
+    if ((optiFg_FgState && State::Instance().activeFgOutput == FGOutput::FSRFG) ||
+        (_dlssgDetected && fakenvapi::isUsingFakenvapi()))
         currentFps /= 2;
 
     if (currentFps != lastFps)
