@@ -2745,6 +2745,99 @@ bool MenuCommon::RenderMenu()
                     }
                 }
 
+                // FSR FG controls
+                if (State::Instance().activeFgOutput == FGOutput::XeFG &&
+                    State::Instance().activeFgInput != FGInput::NoFG &&
+                    Config::Instance()->OverlayMenu.value_or_default() && !State::Instance().isWorkingAsNvngx &&
+                    State::Instance().api == DX12)
+                {
+                    if (State::Instance().activeFgInput != FGInput::Upscaler ||
+                        (currentFeature != nullptr && !currentFeature->IsFrozen()) && FfxApiProxy::InitFfxDx12())
+                    {
+                        ImGui::SeparatorText("Frame Generation (XeFG)");
+
+                        bool fgActive = Config::Instance()->FGEnabled.value_or_default();
+                        if (ImGui::Checkbox("Active##3", &fgActive))
+                        {
+                            Config::Instance()->FGEnabled = fgActive;
+                            LOG_DEBUG("Enabled set FGEnabled: {}", fgActive);
+
+                            if (Config::Instance()->FGEnabled.value_or_default())
+                                State::Instance().FGchanged = true;
+                        }
+
+                        ShowHelpMarker("Enable frame generation");
+
+                        bool fgDV = Config::Instance()->FGXeFGDebugView.value_or_default();
+                        if (ImGui::Checkbox("Debug View##2", &fgDV))
+                        {
+                            Config::Instance()->FGXeFGDebugView = fgDV;
+
+                            if (Config::Instance()->FGXeFGDebugView.value_or_default())
+                            {
+                                State::Instance().FGchanged = true;
+                                LOG_DEBUG("DebugView set FGChanged");
+                            }
+                        }
+                        ShowHelpMarker("Enable XeFG frame generation debug view");
+
+                        ImGui::SameLine(0.0f, 16.0f);
+                        ImGui::Checkbox("Only Generated##2", &State::Instance().FGonlyGenerated);
+                        ShowHelpMarker("Display only XeFG generated frames");
+
+                        ImGui::Spacing();
+                        if (ImGui::CollapsingHeader("Advanced XeFG Settings"))
+                        {
+                            ImGui::Spacing();
+                            if (ImGui::TreeNode("Rectangle Settings"))
+                            {
+                                ImGui::PushItemWidth(95.0f * Config::Instance()->MenuScale.value_or_default());
+                                int rectLeft = Config::Instance()->FGRectLeft.value_or(0);
+                                if (ImGui::InputInt("Rect Left##2", &rectLeft))
+                                    Config::Instance()->FGRectLeft = rectLeft;
+
+                                ImGui::SameLine(0.0f, 16.0f);
+                                int rectTop = Config::Instance()->FGRectTop.value_or(0);
+                                if (ImGui::InputInt("Rect Top##2", &rectTop))
+                                    Config::Instance()->FGRectTop = rectTop;
+
+                                int rectWidth = Config::Instance()->FGRectWidth.value_or(0);
+                                if (ImGui::InputInt("Rect Width##2", &rectWidth))
+                                    Config::Instance()->FGRectWidth = rectWidth;
+
+                                ImGui::SameLine(0.0f, 16.0f);
+                                int rectHeight = Config::Instance()->FGRectHeight.value_or(0);
+                                if (ImGui::InputInt("Rect Height##2", &rectHeight))
+                                    Config::Instance()->FGRectHeight = rectHeight;
+
+                                ImGui::PopItemWidth();
+                                ShowHelpMarker("Frame generation rectangle, adjust for letterboxed content##2");
+
+                                ImGui::BeginDisabled(!Config::Instance()->FGRectLeft.has_value() &&
+                                                     !Config::Instance()->FGRectTop.has_value() &&
+                                                     !Config::Instance()->FGRectWidth.has_value() &&
+                                                     !Config::Instance()->FGRectHeight.has_value());
+
+                                if (ImGui::Button("Reset FG Rect##2"))
+                                {
+                                    Config::Instance()->FGRectLeft.reset();
+                                    Config::Instance()->FGRectTop.reset();
+                                    Config::Instance()->FGRectWidth.reset();
+                                    Config::Instance()->FGRectHeight.reset();
+                                }
+
+                                ShowHelpMarker("Resets frame generation rectangle##2");
+
+                                ImGui::EndDisabled();
+                                ImGui::TreePop();
+                            }
+
+                            ImGui::Spacing();
+                            ImGui::Spacing();
+                        }
+                    }
+                }
+
                 // OptiFG
                 if (Config::Instance()->OverlayMenu.value_or_default() && State::Instance().api == DX12 &&
                     !State::Instance().isWorkingAsNvngx && State::Instance().activeFgInput == FGInput::Upscaler)

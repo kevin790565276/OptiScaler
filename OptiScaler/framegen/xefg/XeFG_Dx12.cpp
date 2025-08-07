@@ -1,5 +1,7 @@
 #include "XeFG_Dx12.h"
 
+#include <hooks/HooksDx.h>
+#include <hudfix/Hudfix_Dx12.h>
 #include <menu/menu_overlay_dx.h>
 
 #include <magic_enum.hpp>
@@ -100,8 +102,6 @@ feature_version XeFG_Dx12::Version()
 
 void XeFG_Dx12::StopAndDestroyContext(bool destroy, bool shutDown, bool useMutex)
 {
-    _frameCount = 0;
-
     LOG_DEBUG("");
 
     bool mutexTaken = false;
@@ -140,7 +140,6 @@ bool XeFG_Dx12::DestroySwapchainContext()
 {
     LOG_DEBUG("");
 
-    _frameCount = 0;
     _isActive = false;
 
     if (_swapChainContext != nullptr)
@@ -408,15 +407,17 @@ bool XeFG_Dx12::Dispatch()
             auto calculatedTop = ((int) scDesc1.BufferDesc.Height - (int) upscaleFeature->DisplayHeight()) / 2;
             if (calculatedTop > 0)
                 top = Config::Instance()->FGRectTop.value_or(calculatedTop);
+
+            width = Config::Instance()->FGRectWidth.value_or(upscaleFeature->DisplayWidth());
+            height = Config::Instance()->FGRectHeight.value_or(upscaleFeature->DisplayHeight());
         }
         else
         {
             left = Config::Instance()->FGRectLeft.value_or(0);
             top = Config::Instance()->FGRectTop.value_or(0);
+            width = Config::Instance()->FGRectWidth.value_or(_width);
+            height = Config::Instance()->FGRectHeight.value_or(_height);
         }
-
-        width = Config::Instance()->FGRectWidth.value_or(_width);
-        height = Config::Instance()->FGRectHeight.value_or(_height);
     }
     else
     {
@@ -467,7 +468,7 @@ bool XeFG_Dx12::Dispatch()
     }
 
     velocity.pResource = _paramVelocity[fIndex].resource;
-    velocity.incomingState = D3D12_RESOURCE_STATE_COPY_DEST;
+    velocity.incomingState = _paramVelocity[fIndex].getState();
 
     result = XeFGProxy::D3D12TagFrameResource()(_swapChainContext, _commandList[fIndex], _frameCount, &velocity);
     if (result != XEFG_SWAPCHAIN_RESULT_SUCCESS)
@@ -481,7 +482,7 @@ bool XeFG_Dx12::Dispatch()
     depth.validity = XEFG_SWAPCHAIN_RV_UNTIL_NEXT_PRESENT;
     depth.resourceSize = { renderWidth, renderHeight };
     depth.pResource = _paramDepth[fIndex].resource;
-    depth.incomingState = D3D12_RESOURCE_STATE_COPY_DEST;
+    depth.incomingState = _paramDepth[fIndex].getState();
 
     result = XeFGProxy::D3D12TagFrameResource()(_swapChainContext, _commandList[fIndex], _frameCount, &depth);
     if (result != XEFG_SWAPCHAIN_RESULT_SUCCESS)
@@ -490,7 +491,26 @@ bool XeFG_Dx12::Dispatch()
         return false;
     }
 
-    if (!_noHudless[fIndex])
+    if (!_noUi[fIndex])
+    {
+        xefg_swapchain_d3d12_resource_data_t ui = {};
+        ui.type = XEFG_SWAPCHAIN_RES_UI;
+        ui.validity = XEFG_SWAPCHAIN_RV_UNTIL_NEXT_PRESENT;
+        ui.resourceBase = { left, top };
+        ui.resourceSize = { width, height };
+        ui.pResource = _paramUi[fIndex].resource;
+        ui.incomingState = _paramUi[fIndex].getState();
+
+        LOG_DEBUG("Using _paramUi[{}]: {:X}", fIndex, (size_t) _paramUi[fIndex].resource);
+
+        result = XeFGProxy::D3D12TagFrameResource()(_swapChainContext, _commandList[fIndex], _frameCount, &ui);
+        if (result != XEFG_SWAPCHAIN_RESULT_SUCCESS)
+        {
+            LOG_ERROR("D3D12TagFrameResource Hudless error: {} ({})", magic_enum::enum_name(result), (UINT) result);
+            return false;
+        }
+    }
+    else if (!_noHudless[fIndex])
     {
         xefg_swapchain_d3d12_resource_data_t hudless = {};
         hudless.type = XEFG_SWAPCHAIN_RES_HUDLESS_COLOR;
@@ -498,7 +518,7 @@ bool XeFG_Dx12::Dispatch()
         hudless.resourceBase = { left, top };
         hudless.resourceSize = { width, height };
         hudless.pResource = _paramHudless[fIndex].resource;
-        hudless.incomingState = D3D12_RESOURCE_STATE_COPY_DEST;
+        hudless.incomingState = _paramHudless[fIndex].getState();
 
         LOG_DEBUG("Using _paramHudless[{}]: {:X}", fIndex, (size_t) _paramHudless[fIndex].resource);
 
@@ -512,14 +532,17 @@ bool XeFG_Dx12::Dispatch()
 
     xefg_swapchain_frame_constant_data_t constData = {};
 
-    XMFLOAT4X4 float4x4;
+    if (_cameraPosition[0] != 0.0 || _cameraPosition[1] != 0.0 || _cameraPosition[2] != 0.0)
+    {
+        XMFLOAT4X4 float4x4;
 
-    XMStoreFloat4x4(&float4x4,
-                    DirectX::XMMatrixTranslation(_cameraPosition[0], _cameraPosition[1], _cameraPosition[2]));
-    memcpy(constData.viewMatrix, float4x4.m, sizeof(float) * 16);
+        XMStoreFloat4x4(&float4x4,
+                        DirectX::XMMatrixTranslation(_cameraPosition[0], _cameraPosition[1], _cameraPosition[2]));
+        memcpy(constData.viewMatrix, float4x4.m, sizeof(float) * 16);
 
-    XMStoreFloat4x4(&float4x4, DirectX::XMMatrixIdentity());
-    memcpy(constData.projectionMatrix, float4x4.m, sizeof(float) * 16);
+        XMStoreFloat4x4(&float4x4, DirectX::XMMatrixIdentity());
+        memcpy(constData.projectionMatrix, float4x4.m, sizeof(float) * 16);
+    }
 
     constData.jitterOffsetX = _jitterX;
     constData.jitterOffsetY = _jitterY;
@@ -556,3 +579,57 @@ bool XeFG_Dx12::Dispatch()
 void* XeFG_Dx12::FrameGenerationContext() { return _fgContext; }
 
 void* XeFG_Dx12::SwapchainContext() { return _swapChainContext; }
+
+void XeFG_Dx12::EvaluateState(ID3D12Device* device, FG_Constants& fgConstants)
+{
+    LOG_FUNC();
+
+    if (!Config::Instance()->OverlayMenu.value_or_default())
+        return;
+
+    static bool lastInfiniteDepth = false;
+    bool currentInfiniteDepth = static_cast<bool>(fgConstants.flags & FG_Flags::InfiniteDepth);
+    if (lastInfiniteDepth != currentInfiniteDepth)
+    {
+        lastInfiniteDepth = currentInfiniteDepth;
+        LOG_DEBUG("Infinite Depth changed: {}", currentInfiniteDepth);
+        State::Instance().FGchanged = true;
+    }
+
+    if (!State::Instance().FGchanged && Config::Instance()->FGEnabled.value_or_default() && !IsPaused() &&
+        XeFGProxy::InitXeFG() && !IsActive() && HooksDx::CurrentSwapchainFormat() != DXGI_FORMAT_UNKNOWN)
+    {
+        CreateObjects(device);
+        CreateContext(device, fgConstants);
+        ResetCounters();
+        UpdateTarget();
+    }
+    else if ((!Config::Instance()->FGEnabled.value_or_default() || State::Instance().FGchanged) && IsActive())
+    {
+        StopAndDestroyContext(State::Instance().SCchanged, false, false);
+
+        if (State::Instance().activeFgInput == FGInput::Upscaler)
+        {
+            State::Instance().ClearCapturedHudlesses = true;
+            Hudfix_Dx12::ResetCounters();
+        }
+    }
+
+    if (State::Instance().FGchanged)
+    {
+        LOG_DEBUG("(FG) Frame generation paused");
+        ResetCounters();
+        UpdateTarget();
+
+        if (State::Instance().activeFgInput == FGInput::Upscaler)
+            Hudfix_Dx12::ResetCounters();
+
+        // Release FG mutex
+        if (Mutex.getOwner() == 2)
+            Mutex.unlockThis(2);
+
+        State::Instance().FGchanged = false;
+    }
+
+    State::Instance().SCchanged = false;
+}

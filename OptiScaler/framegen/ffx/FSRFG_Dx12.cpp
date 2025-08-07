@@ -2,12 +2,12 @@
 
 #include <State.h>
 
-#include <upscalers/IFeature.h>
-#include <menu/menu_overlay_dx.h>
-#include <future>
 #include <hooks/HooksDx.h>
+#include <upscalers/IFeature.h>
 #include <hudfix/Hudfix_Dx12.h>
-// #define USE_QUEUE_FOR_FG
+#include <menu/menu_overlay_dx.h>
+
+#include <future>
 
 typedef struct FfxSwapchainFramePacingTuning
 {

@@ -74,7 +74,16 @@ bool Config::Reload(std::filesystem::path iniPath)
                 else if (FGPreset.value_or_default() == FGPreset::OptiFG)
                 {
                     FGInput.set_volatile_value(FGInput::Upscaler);
-                    FGOutput.set_volatile_value(FGOutput::FSRFG);
+
+                    if (auto FGOutputString = readString("FrameGen", "FGOutput"); FGOutputString.has_value())
+                    {
+                        if (lstrcmpiA(FGOutputString.value().c_str(), "fsrfg") == 0)
+                            FGOutput.set_from_config(FGOutput::FSRFG);
+                        else if (lstrcmpiA(FGOutputString.value().c_str(), "xefg") == 0)
+                            FGOutput.set_from_config(FGOutput::XeFG);
+                        else
+                            FGOutput.set_from_config(FGOutput::FSRFG);
+                    }
                 }
                 else if (FGPreset.value_or_default() == FGPreset::Nukems)
                 {

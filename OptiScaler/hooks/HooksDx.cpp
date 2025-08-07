@@ -842,6 +842,18 @@ static HRESULT hkCreateSwapChain(IDXGIFactory* pFactory, IUnknown* pDevice, DXGI
         pDesc->Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
     }
 
+    // Disable FSR FG if amd dll is not found
+    if (State::Instance().activeFgOutput == FGOutput::FSRFG && !FfxApiProxy::InitFfxDx12())
+    {
+        Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
+        State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
+    }
+    else if (State::Instance().activeFgOutput == FGOutput::XeFG && !XeFGProxy::InitXeFG())
+    {
+        Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
+        State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
+    }
+
     ID3D12CommandQueue* cq = nullptr;
     if (Config::Instance()->OverlayMenu.value_or_default() &&
         (State::Instance().activeFgOutput == FGOutput::FSRFG || State::Instance().activeFgOutput == FGOutput::XeFG) &&
@@ -965,18 +977,6 @@ static HRESULT hkCreateSwapChain(IDXGIFactory* pFactory, IUnknown* pDevice, DXGI
         LOG_ERROR("D3D12_CreateContext error: {}", scResult);
 
         return E_INVALIDARG;
-    }
-
-    // Disable FSR FG if amd dll is not found
-    if (State::Instance().activeFgOutput == FGOutput::FSRFG && !FfxApiProxy::InitFfxDx12())
-    {
-        Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
-        State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
-    }
-    else if (State::Instance().activeFgOutput == FGOutput::XeFG && !XeFGProxy::InitXeFG())
-    {
-        Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
-        State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
     }
 
     if (!_skipFGSwapChainCreation && Config::Instance()->FGDontUseSwapchainBuffers.value_or_default())
@@ -1142,6 +1142,18 @@ static HRESULT hkCreateSwapChainForHwnd(IDXGIFactory* This, IUnknown* pDevice, H
         pDesc->Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
     }
 
+    // Disable FSR FG if amd dll is not found
+    if (State::Instance().activeFgOutput == FGOutput::FSRFG && !FfxApiProxy::InitFfxDx12())
+    {
+        Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
+        State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
+    }
+    else if (State::Instance().activeFgOutput == FGOutput::XeFG && !XeFGProxy::InitXeFG())
+    {
+        Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
+        State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
+    }
+
     ID3D12CommandQueue* cq = nullptr;
     if ((State::Instance().activeFgOutput == FGOutput::FSRFG || State::Instance().activeFgOutput == FGOutput::XeFG) &&
         !_skipFGSwapChainCreation && FfxApiProxy::InitFfxDx12() && pDevice->QueryInterface(IID_PPV_ARGS(&cq)) == S_OK)
@@ -1263,18 +1275,6 @@ static HRESULT hkCreateSwapChainForHwnd(IDXGIFactory* This, IUnknown* pDevice, H
 
         LOG_ERROR("D3D12_CreateContext error: {}", scResult);
         return E_INVALIDARG;
-    }
-
-    // Disable FSR FG if amd dll is not found
-    if (State::Instance().activeFgOutput == FGOutput::FSRFG && !FfxApiProxy::InitFfxDx12())
-    {
-        Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
-        State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
-    }
-    else if (State::Instance().activeFgOutput == FGOutput::XeFG && !XeFGProxy::InitXeFG())
-    {
-        Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
-        State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
     }
 
     if (!_skipFGSwapChainCreation && Config::Instance()->FGDontUseSwapchainBuffers.value_or_default())

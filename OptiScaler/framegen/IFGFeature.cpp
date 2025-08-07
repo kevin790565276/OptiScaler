@@ -7,6 +7,7 @@ int IFGFeature::GetIndex() { return (_frameCount % BUFFER_COUNT); }
 UINT64 IFGFeature::StartNewFrame()
 {
     LOG_FUNC();
+
     _frameCount++;
     auto fIndex = GetIndex();
 
