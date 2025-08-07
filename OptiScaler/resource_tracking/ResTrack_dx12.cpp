@@ -12,13 +12,6 @@
 #include <include/d3dx/d3dx12.h>
 #include <detours/detours.h>
 
-#include <initguid.h>
-#include <guiddef.h>
-
-DEFINE_GUID(GUID_Tracking, 0x12345678, 0x1234, 0x1234, 0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef);
-
-static UINT _trackMark = 1;
-
 // Device hooks for FG
 typedef void (*PFN_CreateRenderTargetView)(ID3D12Device* This, ID3D12Resource* pResource,
                                            D3D12_RENDER_TARGET_VIEW_DESC* pDesc,
@@ -1620,13 +1613,14 @@ void ResTrack_Dx12::hkClose(ID3D12GraphicsCommandList* This)
             }
         }
 
-        if (!fg->DepthReady())
+        if (!fg->DepthReady() && !fg->MVsReady())
         {
             if (This == _inputsCommandList[index])
             {
-                LOG_DEBUG("Depth CmdList: {:X}", (size_t) This);
+                LOG_DEBUG("Inputs CmdList: {:X}", (size_t) This);
 
                 fg->SetDepthReady();
+                fg->SetMVsReady();
 
                 _inputsCmdList = _inputsCommandList[index];
                 _inputsCommandList[index] = nullptr;
