@@ -23,10 +23,20 @@ bool Sl_Inputs_Dx12::setConstants(const sl::Constants& values, uint32_t frameId)
 
     data = sl::Constants {};
 
-    if (data.has_value() && values.structVersion == data.value().structVersion)
+    if (data.has_value())
     {
-        data = values;
-        return true;
+        if (values.structVersion == data.value().structVersion)
+        {
+            data = values;
+            return true;
+        }
+        else if (data.value().structVersion == sl::kStructVersion2 && values.structVersion == sl::kStructVersion1)
+        {
+            auto* pNext = data.value().next;
+            memcpy(&data, &values, sizeof(values) - sizeof(sl::Constants::minRelativeLinearDepthObjectSeparation));
+            data.value().structVersion = sl::kStructVersion2;
+            data.value().next = pNext;
+        }
     }
 
     data.reset();
@@ -151,7 +161,7 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         hudlessSent = true;
 
-            ResTrack_Dx12::SetHudlessCmdList(cmdBuffer);
+        ResTrack_Dx12::SetHudlessCmdList(cmdBuffer);
 
         auto hudlessResource = (ID3D12Resource*) tag.resource->native;
 
@@ -178,7 +188,7 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         depthSent = true;
 
-            ResTrack_Dx12::SetInputsCmdList(cmdBuffer);
+        ResTrack_Dx12::SetInputsCmdList(cmdBuffer);
         // ResTrack_Dx12::SetDepthCmdList(cmdBuffer);
 
         auto depthResource = (ID3D12Resource*) tag.resource->native;
