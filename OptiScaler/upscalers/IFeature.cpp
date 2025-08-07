@@ -98,6 +98,14 @@ bool IFeature::SetInitParameters(NVSDK_NGX_Parameter* InParameters)
         LOG_INFO("Init Flag JitteredMV: {}", _initFlags.JitteredMV);
         LOG_INFO("Init Flag LowResMV: {}", _initFlags.LowResMV);
         LOG_INFO("Init Flag SharpenEnabled: {}", _initFlags.SharpenEnabled);
+
+        Config::Instance()->FGXeFGDepthInverted = _initFlags.DepthInverted;
+        Config::Instance()->FGXeFGJitteredMV = _initFlags.JitteredMV;
+        Config::Instance()->FGXeFGHighResMV = !_initFlags.LowResMV;
+        LOG_DEBUG("XeFG DepthInverted: {}", Config::Instance()->FGXeFGDepthInverted.value_or_default());
+        LOG_DEBUG("XeFG JitteredMV: {}", Config::Instance()->FGXeFGJitteredMV.value_or_default());
+        LOG_DEBUG("XeFG HighResMV: {}", Config::Instance()->FGXeFGHighResMV.value_or_default());
+        Config::Instance()->SaveXeFG();
     }
 
     if (InParameters->Get(NVSDK_NGX_Parameter_OutWidth, &outWidth) == NVSDK_NGX_Result_Success &&

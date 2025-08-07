@@ -30,6 +30,7 @@ class fakenvapi
     static void Init(PFN_NvApi_QueryInterface& queryInterface);
     static void reportFGPresent(IDXGISwapChain* pSwapChain, bool fg_state, bool frame_interpolated);
     static bool updateModeAndContext();
+    static bool setModeAndContext(void* context, Mode mode);
     static Mode getCurrentMode();
     static bool isUsingFakenvapi();
 };

@@ -72,6 +72,7 @@ class IFGFeature
 
     virtual feature_version Version() = 0;
     virtual const char* Name() = 0;
+    virtual bool NeedsCommandlistExecution() = 0;
 
     virtual void ReleaseObjects() = 0;
     virtual void StopAndDestroyContext(bool destroy, bool shutDown, bool useMutex) = 0;
@@ -115,8 +116,8 @@ class IFGFeature
     void UpdateTarget();
 
     UINT64 FrameCount();
-    UINT64 LastDispatchedFrame();
     UINT64 TargetFrame();
+    UINT64 LastDispatchedFrame();
 
     IFGFeature() = default;
 };

@@ -118,6 +118,26 @@ bool fakenvapi::updateModeAndContext()
     return false;
 }
 
+bool fakenvapi::setModeAndContext(void* context, Mode mode)
+{
+    if (!isUsingFakenvapi())
+        return false;
+
+    LOG_FUNC();
+
+    if (Fake_SetLowLatencyCtx)
+    {
+        auto result = Fake_SetLowLatencyCtx(context, mode);
+
+        if (result != NVAPI_OK)
+            LOG_ERROR("Can't set Low Latency context from fakenvapi");
+
+        return result == NVAPI_OK;
+    }
+
+    return false;
+}
+
 // updateModeAndContext needs to be called before that
 Mode fakenvapi::getCurrentMode() { return _lowLatencyMode; }
 

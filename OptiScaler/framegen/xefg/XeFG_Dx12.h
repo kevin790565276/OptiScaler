@@ -2,25 +2,37 @@
 
 #include <framegen/IFGFeature_Dx12.h>
 
-#include <proxies/FfxApi_Proxy.h>
+#include <proxies/XeLL_Proxy.h>
+#include <proxies/XeFG_Proxy.h>
 
-#include <dx12/ffx_api_dx12.h>
-#include <ffx_framegeneration.h>
+#include <xell.h>
+#include <xell_d3d12.h>
+#include <xefg_swapchain.h>
+#include <xefg_swapchain_d3d12.h>
+#include <xefg_swapchain_debug.h>
 
-class FSRFG_Dx12 : public virtual IFGFeature_Dx12
+#include <nvapi/fakenvapi.h>
+
+class XeFG_Dx12 : public virtual IFGFeature_Dx12
 {
   private:
-    ffxContext _swapChainContext = nullptr;
-    ffxContext _fgContext = nullptr;
-    uint32_t _lastHudlessFormat = FFX_API_SURFACE_FORMAT_UNKNOWN;
-    uint32_t _usingHudlessFormat = FFX_API_SURFACE_FORMAT_UNKNOWN;
+    xefg_swapchain_handle_t _swapChainContext = nullptr;
+    xefg_swapchain_handle_t _fgContext = nullptr;
+
+    uint32_t _width = 0;
+    uint32_t _height = 0;
+    int _featureFlags = 0;
+
+    static void xefgLogCallback(const char* message, xefg_swapchain_logging_level_t level, void* userData);
+
+    bool CreateSwapchainContext(ID3D12Device* device);
+    bool DestroySwapchainContext();
 
   public:
     // IFGFeature
     const char* Name() override final;
     feature_version Version() override final;
-    bool NeedsCommandlistExecution() override final { return true; }
-
+    bool NeedsCommandlistExecution() override final { return false; }
 
     // IFGFeature_Dx12
     bool CreateSwapchain(IDXGIFactory* factory, ID3D12CommandQueue* cmdQueue, DXGI_SWAP_CHAIN_DESC* desc,
@@ -39,13 +51,9 @@ class FSRFG_Dx12 : public virtual IFGFeature_Dx12
     void* FrameGenerationContext() override final;
     void* SwapchainContext() override final;
 
-    // Methods
-    void ConfigureFramePaceTuning();
-
-    ffxReturnCode_t DispatchCallback(ffxDispatchDescFrameGeneration* params);
-
-    FSRFG_Dx12() : IFGFeature_Dx12(), IFGFeature()
+    XeFG_Dx12() : IFGFeature_Dx12(), IFGFeature()
     {
-        //
+        if (XeFGProxy::Module() == nullptr)
+            XeFGProxy::InitXeFG();
     }
 };

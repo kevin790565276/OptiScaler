@@ -5,9 +5,11 @@
 
 #include "wrapped_swapchain.h"
 
+#include <framegen/ffx/FSRFG_Dx12.h>
+#include <framegen/xefg/XeFG_Dx12.h>
+
 #include <hudfix/Hudfix_Dx12.h>
 #include <menu/menu_overlay_dx.h>
-#include <framegen/ffx/FSRFG_Dx12.h>
 #include <resource_tracking/ResTrack_Dx12.h>
 
 #include <proxies/Dxgi_Proxy.h>
@@ -554,6 +556,10 @@ static HRESULT hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Fla
     {
         fakenvapi::reportFGPresent(pSwapChain, fg != nullptr && fg->IsActive(), _frameCounter % 2);
     }
+    else if (State::Instance().activeFgOutput == FGOutput::XeFG)
+    {
+        fakenvapi::reportFGPresent(pSwapChain, fg != nullptr && fg->IsActive(), _frameCounter);
+    }
 
     _frameCounter++;
 
@@ -837,15 +843,21 @@ static HRESULT hkCreateSwapChain(IDXGIFactory* pFactory, IUnknown* pDevice, DXGI
     }
 
     ID3D12CommandQueue* cq = nullptr;
-    if (Config::Instance()->OverlayMenu.value_or_default() && State::Instance().activeFgOutput == FGOutput::FSRFG &&
-        !_skipFGSwapChainCreation && FfxApiProxy::InitFfxDx12() && pDevice->QueryInterface(IID_PPV_ARGS(&cq)) == S_OK)
+    if (Config::Instance()->OverlayMenu.value_or_default() &&
+        (State::Instance().activeFgOutput == FGOutput::FSRFG || State::Instance().activeFgOutput == FGOutput::XeFG) &&
+        !_skipFGSwapChainCreation && pDevice->QueryInterface(IID_PPV_ARGS(&cq)) == S_OK)
     {
         cq->SetName(L"GameQueue");
         cq->Release();
 
         // FG Init
         if (State::Instance().currentFG == nullptr)
-            State::Instance().currentFG = new FSRFG_Dx12();
+        {
+            if (State::Instance().activeFgOutput == FGOutput::FSRFG)
+                State::Instance().currentFG = new FSRFG_Dx12();
+            else if (State::Instance().activeFgOutput == FGOutput::XeFG)
+                State::Instance().currentFG = new XeFG_Dx12();
+        }
 
         HooksDx::ReleaseDx12SwapChain(pDesc->OutputWindow);
 
@@ -879,7 +891,7 @@ static HRESULT hkCreateSwapChain(IDXGIFactory* pFactory, IUnknown* pDevice, DXGI
 
                 if (o_FGSCPresent != nullptr)
                 {
-                    LOG_INFO("Hooking FSR FG SwapChain present");
+                    LOG_INFO("Hooking FG SwapChain present");
 
                     DetourTransactionBegin();
                     DetourUpdateThread(GetCurrentThread());
@@ -946,7 +958,7 @@ static HRESULT hkCreateSwapChain(IDXGIFactory* pFactory, IUnknown* pDevice, DXGI
 
             State::Instance().currentSwapchain = (*ppSwapChain);
 
-            LOG_DEBUG("Created FSR-FG swapchain");
+            LOG_DEBUG("Created FG swapchain");
             return S_OK;
         }
 
@@ -957,6 +969,11 @@ static HRESULT hkCreateSwapChain(IDXGIFactory* pFactory, IUnknown* pDevice, DXGI
 
     // Disable FSR FG if amd dll is not found
     if (State::Instance().activeFgOutput == FGOutput::FSRFG && !FfxApiProxy::InitFfxDx12())
+    {
+        Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
+        State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
+    }
+    else if (State::Instance().activeFgOutput == FGOutput::XeFG && !XeFGProxy::InitXeFG())
     {
         Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
         State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
@@ -1126,15 +1143,20 @@ static HRESULT hkCreateSwapChainForHwnd(IDXGIFactory* This, IUnknown* pDevice, H
     }
 
     ID3D12CommandQueue* cq = nullptr;
-    if (State::Instance().activeFgOutput == FGOutput::FSRFG && !_skipFGSwapChainCreation &&
-        FfxApiProxy::InitFfxDx12() && pDevice->QueryInterface(IID_PPV_ARGS(&cq)) == S_OK)
+    if ((State::Instance().activeFgOutput == FGOutput::FSRFG || State::Instance().activeFgOutput == FGOutput::XeFG) &&
+        !_skipFGSwapChainCreation && FfxApiProxy::InitFfxDx12() && pDevice->QueryInterface(IID_PPV_ARGS(&cq)) == S_OK)
     {
         cq->SetName(L"GameQueueHwnd");
         cq->Release();
 
         // FG Init
         if (State::Instance().currentFG == nullptr)
-            State::Instance().currentFG = new FSRFG_Dx12();
+        {
+            if (State::Instance().activeFgOutput == FGOutput::FSRFG)
+                State::Instance().currentFG = new FSRFG_Dx12();
+            else if (State::Instance().activeFgOutput == FGOutput::XeFG)
+                State::Instance().currentFG = new XeFG_Dx12();
+        }
 
         HooksDx::ReleaseDx12SwapChain(hWnd);
 
@@ -1168,7 +1190,7 @@ static HRESULT hkCreateSwapChainForHwnd(IDXGIFactory* This, IUnknown* pDevice, H
 
                 if (o_FGSCPresent != nullptr)
                 {
-                    LOG_INFO("Hooking FSR FG SwapChain present");
+                    LOG_INFO("Hooking FG SwapChain present");
 
                     DetourTransactionBegin();
                     DetourUpdateThread(GetCurrentThread());
@@ -1235,7 +1257,7 @@ static HRESULT hkCreateSwapChainForHwnd(IDXGIFactory* This, IUnknown* pDevice, H
 
             State::Instance().currentSwapchain = (*ppSwapChain);
 
-            LOG_DEBUG("Created FSR-FG swapchain");
+            LOG_DEBUG("Created FG swapchain");
             return S_OK;
         }
 
@@ -1245,6 +1267,11 @@ static HRESULT hkCreateSwapChainForHwnd(IDXGIFactory* This, IUnknown* pDevice, H
 
     // Disable FSR FG if amd dll is not found
     if (State::Instance().activeFgOutput == FGOutput::FSRFG && !FfxApiProxy::InitFfxDx12())
+    {
+        Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
+        State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
+    }
+    else if (State::Instance().activeFgOutput == FGOutput::XeFG && !XeFGProxy::InitXeFG())
     {
         Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
         State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();

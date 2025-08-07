@@ -465,6 +465,9 @@ bool IFGFeature_Dx12::ExecuteCommandList(ID3D12CommandQueue* queue)
 {
     LOG_DEBUG();
 
+    if (!NeedsCommandlistExecution())
+        return true;
+
     if (WaitingExecution())
     {
         auto cmdList = GetCommandList();

@@ -104,6 +104,8 @@ bool Config::Reload(std::filesystem::path iniPath)
                         FGOutput.set_from_config(FGOutput::FSRFG);
                     else if (lstrcmpiA(FGOutputString.value().c_str(), "nukems") == 0)
                         FGOutput.set_from_config(FGOutput::Nukems);
+                    else if (lstrcmpiA(FGOutputString.value().c_str(), "xefg") == 0)
+                        FGOutput.set_from_config(FGOutput::XeFG);
                 }
             }
         }
@@ -167,6 +169,13 @@ bool Config::Reload(std::filesystem::path iniPath)
 
             FGDontUseSwapchainBuffers.set_from_config(readBool("OptiFG", "HUDFixDontUseSwapchainBuffers"));
             FGRelaxedResolutionCheck.set_from_config(readBool("OptiFG", "HUDFixRelaxedResolutionCheck"));
+        }
+
+        {
+            FGXeFGDepthInverted.set_from_config(readBool("XeFG", "DepthInverted"));
+            FGXeFGJitteredMV.set_from_config(readBool("XeFG", "JitteredMV"));
+            FGXeFGHighResMV.set_from_config(readBool("XeFG", "HighResMV"));
+            FGXeFGDebugView.set_from_config(readBool("XeFG", "DebugView"));
         }
 
         // Framerate
@@ -730,6 +739,8 @@ bool Config::SaveIni()
                 FGOutputString = "FSRFG";
             else if (FGOutputHeld.value() == FGOutput::Nukems)
                 FGOutputString = "Nukems";
+            else if (FGOutputHeld.value() == FGOutput::XeFG)
+                FGOutputString = "XeFG";
         }
         ini.SetValue("FrameGen", "FGOutput", FGOutputString.c_str());
     }
@@ -744,12 +755,12 @@ bool Config::SaveIni()
         ini.SetValue("FSRFG", "DebugPacingLines",
                      GetBoolValue(Instance()->FGDebugPacingLines.value_for_config()).c_str());
         ini.SetValue("FSRFG", "AllowAsync", GetBoolValue(Instance()->FGAsync.value_for_config()).c_str());
+        ini.SetValue("FSRFG", "UseMutexForSwapchain",
+                     GetBoolValue(Instance()->FGUseMutexForSwapchain.value_for_config()).c_str());
         ini.SetValue("FSRFG", "RectLeft", GetIntValue(Instance()->FGRectLeft.value_for_config()).c_str());
         ini.SetValue("FSRFG", "RectTop", GetIntValue(Instance()->FGRectTop.value_for_config()).c_str());
         ini.SetValue("FSRFG", "RectWidth", GetIntValue(Instance()->FGRectWidth.value_for_config()).c_str());
         ini.SetValue("FSRFG", "RectHeight", GetIntValue(Instance()->FGRectHeight.value_for_config()).c_str());
-        ini.SetValue("FSRFG", "UseMutexForSwapchain",
-                     GetBoolValue(Instance()->FGUseMutexForSwapchain.value_for_config()).c_str());
         ini.SetValue("FSRFG", "FramePacingTuning",
                      GetBoolValue(Instance()->FGFramePacingTuning.value_for_config()).c_str());
         ini.SetValue("FSRFG", "FPTSafetyMarginInMs",
@@ -762,6 +773,13 @@ bool Config::SaveIni()
                      GetIntValue(Instance()->FGFPTHybridSpinTime.value_for_config()).c_str());
         ini.SetValue("FSRFG", "FPTWaitForSingleObjectOnFence",
                      GetBoolValue(Instance()->FGFPTAllowWaitForSingleObjectOnFence.value_for_config()).c_str());
+    }
+
+    {
+        ini.SetValue("XeFG", "DepthInverted", GetBoolValue(Instance()->FGXeFGDepthInverted.value_for_config()).c_str());
+        ini.SetValue("XeFG", "JitteredMV", GetBoolValue(Instance()->FGXeFGJitteredMV.value_for_config()).c_str());
+        ini.SetValue("XeFG", "HighResMV", GetBoolValue(Instance()->FGXeFGHighResMV.value_for_config()).c_str());
+        ini.SetValue("XeFG", "DebugView", GetBoolValue(Instance()->FGXeFGDebugView.value_for_config()).c_str());
     }
 
     // OptiFG
@@ -1186,6 +1204,18 @@ bool Config::SaveFakenvapiIni()
     StreamlineHooks::updateForceReflex();
 
     return fakenvapiIni.SaveFile(FN_iniPath.wstring().c_str()) >= 0;
+}
+
+bool Config::SaveXeFG()
+{
+    ini.SetValue("XeFG", "DepthInverted", GetBoolValue(Instance()->FGXeFGDepthInverted.value_for_config()).c_str());
+    ini.SetValue("XeFG", "JitteredMV", GetBoolValue(Instance()->FGXeFGJitteredMV.value_for_config()).c_str());
+    ini.SetValue("XeFG", "HighResMV", GetBoolValue(Instance()->FGXeFGHighResMV.value_for_config()).c_str());
+
+    auto pathWStr = absoluteFileName.wstring();
+    LOG_INFO("Trying to save ini to: {0}", wstring_to_string(pathWStr));
+
+    return ini.SaveFile(absoluteFileName.wstring().c_str()) >= 0;
 }
 
 void Config::CheckUpscalerFiles()

@@ -365,6 +365,11 @@ class Config
     CustomOptional<bool> FGResourceFlip { false };
     CustomOptional<bool> FGResourceFlipOffset { false };
 
+    CustomOptional<int, NoDefault> FGRectLeft;
+    CustomOptional<int, NoDefault> FGRectTop;
+    CustomOptional<int, NoDefault> FGRectWidth;
+    CustomOptional<int, NoDefault> FGRectHeight;
+
     // OptiFG - Hudfix
     CustomOptional<bool> FGHUDFix { false };
     CustomOptional<int> FGHUDLimit { 1 };
@@ -381,12 +386,6 @@ class Config
     CustomOptional<bool> FGEnableDepthScale { false };
     CustomOptional<float> FGDepthScaleMax { 10000.0f };
 
-    // OptiFG - FSR-FG
-    CustomOptional<int, NoDefault> FGRectLeft;
-    CustomOptional<int, NoDefault> FGRectTop;
-    CustomOptional<int, NoDefault> FGRectWidth;
-    CustomOptional<int, NoDefault> FGRectHeight;
-
     // OptiFG - FSR-FG FPT
     CustomOptional<bool> FGFramePacingTuning { true };
     CustomOptional<float> FGFPTSafetyMarginInMs { 0.01f };
@@ -394,6 +393,12 @@ class Config
     CustomOptional<bool> FGFPTAllowHybridSpin { false };
     CustomOptional<int> FGFPTHybridSpinTime { 2 };
     CustomOptional<bool> FGFPTAllowWaitForSingleObjectOnFence { false };
+
+    // OptiFG - XeFG
+    CustomOptional<bool> FGXeFGDepthInverted { false };
+    CustomOptional<bool> FGXeFGJitteredMV { false };
+    CustomOptional<bool> FGXeFGHighResMV { false };
+    CustomOptional<bool> FGXeFGDebugView { false };
 
     // DLSS Enabler
     std::optional<int> DE_FramerateLimit; // off - vsync - number
@@ -433,6 +438,7 @@ class Config
 
     bool LoadFromPath(const wchar_t* InPath);
     bool SaveIni();
+    bool SaveXeFG();
 
     bool ReloadFakenvapi();
     bool SaveFakenvapiIni();
