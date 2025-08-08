@@ -170,7 +170,7 @@ class XeFGProxy
         if (mainModule != nullptr)
         {
             _dll = mainModule;
-            return true;
+            // return true;
         }
 
         auto dllPath = Util::DllPath();

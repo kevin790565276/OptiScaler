@@ -534,15 +534,30 @@ bool XeFG_Dx12::Dispatch()
 
     if (_cameraPosition[0] != 0.0 || _cameraPosition[1] != 0.0 || _cameraPosition[2] != 0.0)
     {
-        XMFLOAT4X4 float4x4;
+        XMVECTOR right = XMLoadFloat3(reinterpret_cast<const XMFLOAT3*>(_cameraRight));
+        XMVECTOR up = XMLoadFloat3(reinterpret_cast<const XMFLOAT3*>(_cameraUp));
+        XMVECTOR forward = XMLoadFloat3(reinterpret_cast<const XMFLOAT3*>(_cameraForward));
+        XMVECTOR pos = XMLoadFloat3(reinterpret_cast<const XMFLOAT3*>(_cameraPosition));
 
-        XMStoreFloat4x4(&float4x4,
-                        DirectX::XMMatrixTranslation(_cameraPosition[0], _cameraPosition[1], _cameraPosition[2]));
-        memcpy(constData.viewMatrix, float4x4.m, sizeof(float) * 16);
+        float x = -XMVectorGetX(XMVector3Dot(pos, right));
+        float y = -XMVectorGetX(XMVector3Dot(pos, up));
+        float z = -XMVectorGetX(XMVector3Dot(pos, forward));
 
-        XMStoreFloat4x4(&float4x4, DirectX::XMMatrixIdentity());
-        memcpy(constData.projectionMatrix, float4x4.m, sizeof(float) * 16);
+        XMMATRIX view = { XMVectorSet(XMVectorGetX(right), XMVectorGetX(up), XMVectorGetX(forward), 0.0f),
+                          XMVectorSet(XMVectorGetY(right), XMVectorGetY(up), XMVectorGetY(forward), 0.0f),
+                          XMVectorSet(XMVectorGetZ(right), XMVectorGetZ(up), XMVectorGetZ(forward), 0.0f),
+                          XMVectorSet(x, y, z, 1.0f) };
+
+        memcpy(constData.viewMatrix, view.r, sizeof(view));
     }
+
+    if (Config::Instance()->FGXeFGDepthInverted.value_or_default())
+        std::swap(_cameraNear, _cameraFar);
+
+    // Cyberpunk seems to be sending LH so do the same
+    // it also sends some extra data in usually empty spots but no idea what that is
+    auto projectionMatrix = XMMatrixPerspectiveFovLH(_cameraVFov, _cameraAspectRatio, _cameraNear, _cameraFar);
+    memcpy(constData.projectionMatrix, projectionMatrix.r, sizeof(projectionMatrix));
 
     constData.jitterOffsetX = _jitterX;
     constData.jitterOffsetY = _jitterY;
