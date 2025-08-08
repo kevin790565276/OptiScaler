@@ -83,7 +83,6 @@ class State
     float lastFsrCameraFar = 0.0f;
 
     // Frame Generation
-    FGPreset currentFgPreset = FGPreset::NoFG;
     FGInput activeFgInput = FGInput::NoFG;
     FGOutput activeFgOutput = FGOutput::NoFG;
 
@@ -191,7 +190,7 @@ class State
     bool isShuttingDown = false;
 
     // menu warnings
-    bool showRestartWarning = false;
+    bool fgSettingsChanged = false;
     bool nvngxIniDetected = false;
 
     bool nvngxExists = false;

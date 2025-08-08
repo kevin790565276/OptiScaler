@@ -126,7 +126,16 @@ bool FSRFG_Dx12::Dispatch()
 
     FfxApiProxy::D3D12_Configure()(&_swapChainContext, &uiDesc.header);
 
-    _lastHudlessFormat = m_FrameGenerationConfig.HUDLessColor.description.format;
+    static auto localLastHudlessFormat = m_FrameGenerationConfig.HUDLessColor.description.format;
+    _lastHudlessFormat = (FfxApiSurfaceFormat) m_FrameGenerationConfig.HUDLessColor.description.format;
+
+    if (_lastHudlessFormat != localLastHudlessFormat)
+    {
+        State::Instance().FGchanged = true;
+        LOG_DEBUG("HUDLESS format changed, triggering FG reinit");
+    }
+
+    localLastHudlessFormat = _lastHudlessFormat;
 
     m_FrameGenerationConfig.frameGenerationEnabled = true;
     m_FrameGenerationConfig.flags = 0;
@@ -335,7 +344,7 @@ ffxReturnCode_t FSRFG_Dx12::DispatchCallback(ffxDispatchDescFrameGeneration* par
         _lastHudlessFormat != params->presentColor.description.format &&
         (_usingHudlessFormat == FFX_API_SURFACE_FORMAT_UNKNOWN || _usingHudlessFormat != _lastHudlessFormat))
     {
-        LOG_DEBUG("Hudless format doesn't match, hudless: {}, present: {}", _lastHudlessFormat,
+        LOG_DEBUG("Hudless format doesn't match, hudless: {}, present: {}", (uint32_t) _lastHudlessFormat,
                   params->presentColor.description.format);
         State::Instance().FGchanged = true;
     }
@@ -530,7 +539,7 @@ void FSRFG_Dx12::CreateContext(ID3D12Device* device, FG_Constants& fgConstants)
     LOG_DEBUG("");
 
     // Changing the format of the hudless resource requires a new context
-    if (_fgContext != nullptr && _lastHudlessFormat != FFX_API_SURFACE_FORMAT_UNKNOWN)
+    if (_fgContext != nullptr && (_lastHudlessFormat != _usingHudlessFormat))
     {
         auto result = FfxApiProxy::D3D12_DestroyContext()(&_fgContext, nullptr);
         _fgContext = nullptr;

@@ -347,7 +347,6 @@ class Config
     CustomOptional<bool> LoadAsiPlugins { false };
 
     // Frame Generation
-    CustomOptional<FGPreset> FGPreset { FGPreset::NoFG };
     CustomOptional<FGInput> FGInput { FGInput::NoFG };
     CustomOptional<FGOutput> FGOutput { FGOutput::NoFG };
     CustomOptional<bool> DrawUIOverFG { false };

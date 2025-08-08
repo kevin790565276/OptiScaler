@@ -56,70 +56,32 @@ bool Config::Reload(std::filesystem::path iniPath)
 
         // Frame Generation
         {
-            // Keep the old FGType name
-            if (auto FGPresetString = readString("FrameGen", "FGType"); FGPresetString.has_value())
+            if (auto FGInputString = readString("FrameGen", "FGInput"); FGInputString.has_value())
             {
-                if (lstrcmpiA(FGPresetString.value().c_str(), "nofg") == 0)
-                    FGPreset.set_from_config(FGPreset::NoFG);
-                else if (lstrcmpiA(FGPresetString.value().c_str(), "optifg") == 0)
-                    FGPreset.set_from_config(FGPreset::OptiFG);
-                else if (lstrcmpiA(FGPresetString.value().c_str(), "nukems") == 0)
-                    FGPreset.set_from_config(FGPreset::Nukems);
-
-                if (FGPreset.value_or_default() == FGPreset::NoFG)
+                if (lstrcmpiA(FGInputString.value().c_str(), "nofg") == 0)
+                    FGInput.set_from_config(FGInput::NoFG);
+                else if (lstrcmpiA(FGInputString.value().c_str(), "upscaler") == 0)
+                    FGInput.set_from_config(FGInput::Upscaler);
+                else if (lstrcmpiA(FGInputString.value().c_str(), "nukems") == 0)
                 {
-                    FGInput.set_volatile_value(FGInput::NoFG);
-                    FGOutput.set_volatile_value(FGOutput::NoFG);
+                    FGInput.set_from_config(FGInput::Nukems);
+                    FGOutput.set_from_config(FGOutput::Nukems);
                 }
-                else if (FGPreset.value_or_default() == FGPreset::OptiFG)
-                {
-                    FGInput.set_volatile_value(FGInput::Upscaler);
-
-                    if (auto FGOutputString = readString("FrameGen", "FGOutput"); FGOutputString.has_value())
-                    {
-                        if (lstrcmpiA(FGOutputString.value().c_str(), "fsrfg") == 0)
-                            FGOutput.set_from_config(FGOutput::FSRFG);
-                        else if (lstrcmpiA(FGOutputString.value().c_str(), "xefg") == 0)
-                            FGOutput.set_from_config(FGOutput::XeFG);
-                        else
-                            FGOutput.set_from_config(FGOutput::FSRFG);
-                    }
-                }
-                else if (FGPreset.value_or_default() == FGPreset::Nukems)
-                {
-                    FGInput.set_volatile_value(FGInput::Nukems);
-                    FGOutput.set_volatile_value(FGOutput::Nukems);
-                }
+                else if (lstrcmpiA(FGInputString.value().c_str(), "dlssg") == 0)
+                    FGInput.set_from_config(FGInput::DLSSG);
             }
-            else
-            {
-                if (auto FGInputString = readString("FrameGen", "FGInput"); FGInputString.has_value())
-                {
-                    if (lstrcmpiA(FGInputString.value().c_str(), "nofg") == 0)
-                        FGInput.set_from_config(FGInput::NoFG);
-                    else if (lstrcmpiA(FGInputString.value().c_str(), "upscaler") == 0)
-                        FGInput.set_from_config(FGInput::Upscaler);
-                    else if (lstrcmpiA(FGInputString.value().c_str(), "nukems") == 0)
-                    {
-                        FGInput.set_from_config(FGInput::Nukems);
-                        FGOutput.set_from_config(FGOutput::Nukems);
-                    }
-                    else if (lstrcmpiA(FGInputString.value().c_str(), "dlssg") == 0)
-                        FGInput.set_from_config(FGInput::DLSSG);
-                }
 
-                if (auto FGOutputString = readString("FrameGen", "FGOutput");
-                    FGInput.value_or_default() != FGInput::Nukems && FGOutputString.has_value())
-                {
-                    if (lstrcmpiA(FGOutputString.value().c_str(), "nofg") == 0)
-                        FGOutput.set_from_config(FGOutput::NoFG);
-                    else if (lstrcmpiA(FGOutputString.value().c_str(), "fsrfg") == 0)
-                        FGOutput.set_from_config(FGOutput::FSRFG);
-                    else if (lstrcmpiA(FGOutputString.value().c_str(), "nukems") == 0)
-                        FGOutput.set_from_config(FGOutput::Nukems);
-                    else if (lstrcmpiA(FGOutputString.value().c_str(), "xefg") == 0)
-                        FGOutput.set_from_config(FGOutput::XeFG);
-                }
+            if (auto FGOutputString = readString("FrameGen", "FGOutput");
+                FGInput.value_or_default() != FGInput::Nukems && FGOutputString.has_value())
+            {
+                if (lstrcmpiA(FGOutputString.value().c_str(), "nofg") == 0)
+                    FGOutput.set_from_config(FGOutput::NoFG);
+                else if (lstrcmpiA(FGOutputString.value().c_str(), "fsrfg") == 0)
+                    FGOutput.set_from_config(FGOutput::FSRFG);
+                else if (lstrcmpiA(FGOutputString.value().c_str(), "nukems") == 0)
+                    FGOutput.set_from_config(FGOutput::Nukems);
+                else if (lstrcmpiA(FGOutputString.value().c_str(), "xefg") == 0)
+                    FGOutput.set_from_config(FGOutput::XeFG);
             }
         }
 
@@ -714,21 +676,6 @@ bool Config::SaveIni()
 
     // Frame Generation
     {
-        std::string FGPresetString = "auto";
-        if (auto FGPresetHeld = Instance()->FGPreset.value_for_config(); FGPresetHeld.has_value())
-        {
-            if (FGPresetHeld.value() == FGPreset::NoFG)
-                FGPresetString = "NoFG";
-            else if (FGPresetHeld.value() == FGPreset::OptiFG)
-                FGPresetString = "OptiFG";
-            else if (FGPresetHeld.value() == FGPreset::Nukems)
-                FGPresetString = "Nukems";
-
-            Instance()->FGInput.reset();
-            Instance()->FGOutput.reset();
-        }
-        ini.SetValue("FrameGen", "FGType", FGPresetString.c_str());
-
         std::string FGInputString = "auto";
         if (auto FGInputHeld = Instance()->FGInput.value_for_config(); FGInputHeld.has_value())
         {
