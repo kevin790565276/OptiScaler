@@ -100,12 +100,16 @@ bool Config::Reload(std::filesystem::path iniPath)
                     else if (lstrcmpiA(FGInputString.value().c_str(), "upscaler") == 0)
                         FGInput.set_from_config(FGInput::Upscaler);
                     else if (lstrcmpiA(FGInputString.value().c_str(), "nukems") == 0)
+                    {
                         FGInput.set_from_config(FGInput::Nukems);
+                        FGOutput.set_from_config(FGOutput::Nukems);
+                    }
                     else if (lstrcmpiA(FGInputString.value().c_str(), "dlssg") == 0)
                         FGInput.set_from_config(FGInput::DLSSG);
                 }
 
-                if (auto FGOutputString = readString("FrameGen", "FGOutput"); FGOutputString.has_value())
+                if (auto FGOutputString = readString("FrameGen", "FGOutput");
+                    FGInput.value_or_default() != FGInput::Nukems && FGOutputString.has_value())
                 {
                     if (lstrcmpiA(FGOutputString.value().c_str(), "nofg") == 0)
                         FGOutput.set_from_config(FGOutput::NoFG);
