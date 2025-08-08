@@ -10,81 +10,31 @@
 #include <d3d12.h>
 #include <ffx_api_types.h>
 
-struct Dx12Resource
+typedef struct Dx12Resource
 {
-  private:
-    D3D12_RESOURCE_STATES state {};
-
-  public:
-    ID3D12Resource* resource {};
-
-    void setState(D3D12_RESOURCE_STATES state) { this->state = state; }
-    D3D12_RESOURCE_STATES getState() { return state; }
-    FfxApiResourceState getFfxApiState()
-    {
-        switch (state)
-        {
-        case D3D12_RESOURCE_STATE_COMMON:
-            return FFX_API_RESOURCE_STATE_COMMON;
-        case D3D12_RESOURCE_STATE_UNORDERED_ACCESS:
-            return FFX_API_RESOURCE_STATE_UNORDERED_ACCESS;
-        case D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE:
-            return FFX_API_RESOURCE_STATE_COMPUTE_READ;
-        case D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE:
-            return FFX_API_RESOURCE_STATE_PIXEL_READ;
-        case (D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE):
-            return FFX_API_RESOURCE_STATE_PIXEL_COMPUTE_READ;
-        case D3D12_RESOURCE_STATE_COPY_SOURCE:
-            return FFX_API_RESOURCE_STATE_COPY_SRC;
-        case D3D12_RESOURCE_STATE_COPY_DEST:
-            return FFX_API_RESOURCE_STATE_COPY_DEST;
-        case D3D12_RESOURCE_STATE_GENERIC_READ:
-            return FFX_API_RESOURCE_STATE_GENERIC_READ;
-        case D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT:
-            return FFX_API_RESOURCE_STATE_INDIRECT_ARGUMENT;
-        case D3D12_RESOURCE_STATE_RENDER_TARGET:
-            return FFX_API_RESOURCE_STATE_RENDER_TARGET;
-        default:
-            return FFX_API_RESOURCE_STATE_COMMON;
-        }
-    }
+    FG_ResourceType type = FG_ResourceType::Undefined;
+    ID3D12Resource* resource = nullptr;
+    ID3D12Resource* copy = nullptr;
+    ID3D12CommandList* cmdList = nullptr;
+    D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COMMON;
+    FG_ResourceValidity validity = FG_ResourceValidity::ValidNow;
 };
 
 class IFGFeature_Dx12 : public virtual IFGFeature
 {
-  private:
-    std::unique_ptr<RF_Dx12> _mvFlip;
-    std::unique_ptr<RF_Dx12> _depthFlip;
-    ID3D12Device* _device = nullptr;
-
   protected:
+    ID3D12Device* _device = nullptr;
     IDXGISwapChain* _swapChain = nullptr;
     ID3D12CommandQueue* _gameCommandQueue = nullptr;
+
     HWND _hwnd = NULL;
 
-    Dx12Resource _paramVelocity[BUFFER_COUNT] {};
-    Dx12Resource _paramVelocityCopy[BUFFER_COUNT] {};
-    Dx12Resource _paramDepth[BUFFER_COUNT] {};
-    Dx12Resource _paramDepthCopy[BUFFER_COUNT] {};
-    Dx12Resource _paramHudless[BUFFER_COUNT] {};
-    Dx12Resource _paramHudlessCopy[BUFFER_COUNT] {};
-    Dx12Resource _paramUi[BUFFER_COUNT] {};
-    Dx12Resource _paramUiCopy[BUFFER_COUNT] {};
-    Dx12Resource _paramDistortionField[BUFFER_COUNT] {};
-    Dx12Resource _paramDistortionFieldCopy[BUFFER_COUNT] {};
+    std::map<FG_ResourceType, Dx12Resource> _frameResources[BUFFER_COUNT] {};
 
-    // One extra to copy things
-    ID3D12GraphicsCommandList* _commandList[BUFFER_COUNT + 1] {};
-    ID3D12CommandAllocator* _commandAllocators[BUFFER_COUNT + 1] {};
+    std::unique_ptr<RF_Dx12> _mvFlip;
+    std::unique_ptr<RF_Dx12> _depthFlip;
 
-    bool CreateBufferResource(ID3D12Device* InDevice, ID3D12Resource* InSource, D3D12_RESOURCE_STATES InState,
-                              ID3D12Resource** OutResource, bool UAV = false, bool depth = false);
-    bool CreateBufferResourceWithSize(ID3D12Device* device, ID3D12Resource* source, D3D12_RESOURCE_STATES state,
-                                      ID3D12Resource** target, UINT width, UINT height, bool UAV, bool depth);
-    void ResourceBarrier(ID3D12GraphicsCommandList* InCommandList, ID3D12Resource* InResource,
-                         D3D12_RESOURCE_STATES InBeforeState, D3D12_RESOURCE_STATES InAfterState);
-    bool CopyResource(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* source, ID3D12Resource** target,
-                      D3D12_RESOURCE_STATES sourceState);
+    void NewFrame() override final;
 
   public:
     virtual bool CreateSwapchain(IDXGIFactory* factory, ID3D12CommandQueue* cmdQueue, DXGI_SWAP_CHAIN_DESC* desc,
@@ -95,31 +45,20 @@ class IFGFeature_Dx12 : public virtual IFGFeature
     virtual bool ReleaseSwapchain(HWND hwnd) = 0;
 
     virtual void CreateContext(ID3D12Device* device, FG_Constants& fgConstants) = 0;
-
     virtual void EvaluateState(ID3D12Device* device, FG_Constants& fgConstants) = 0;
-
-    virtual bool Dispatch() = 0;
 
     virtual void* FrameGenerationContext() = 0;
     virtual void* SwapchainContext() = 0;
 
-    // IFGFeature
-    void ReleaseObjects() override final;
-    void CreateObjects(ID3D12Device* InDevice);
+    virtual void ReleaseObjects() = 0;
+    virtual void CreateObjects(ID3D12Device* InDevice) = 0;
 
-    void SetVelocity(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* velocity, D3D12_RESOURCE_STATES state);
-    void SetDepth(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* depth, D3D12_RESOURCE_STATES state);
-    void SetHudless(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* hudless, D3D12_RESOURCE_STATES state,
-                    bool makeCopy = false);
-    void SetUI(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* ui, D3D12_RESOURCE_STATES state,
-               bool makeCopy = false);
-    void SetDistortionField(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* ui, D3D12_RESOURCE_STATES state,
-                            bool makeCopy = false);
+    Dx12Resource* GetResource(FG_ResourceType type);
+    virtual void SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* resource,
+                             D3D12_RESOURCE_STATES state, FG_ResourceValidity validity) = 0;
 
-    void GetHudless(ID3D12Resource* buffer, D3D12_RESOURCE_STATES bufferState);
-
-    bool ExecuteCommandList(ID3D12CommandQueue* queue);
-    ID3D12CommandList* GetCommandList();
+    virtual bool ExecuteCommandList(ID3D12CommandQueue* queue) = 0;
+    virtual ID3D12CommandList* GetCommandList() = 0;
 
     IFGFeature_Dx12() = default;
 };

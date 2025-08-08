@@ -3,148 +3,6 @@
 #include <State.h>
 #include <Config.h>
 
-bool IFGFeature_Dx12::CreateBufferResourceWithSize(ID3D12Device* device, ID3D12Resource* source,
-                                                   D3D12_RESOURCE_STATES state, ID3D12Resource** target, UINT width,
-                                                   UINT height, bool UAV, bool depth)
-{
-    if (device == nullptr || source == nullptr)
-        return false;
-
-    auto inDesc = source->GetDesc();
-
-    if (UAV)
-        inDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-
-    if (depth)
-        inDesc.Format = DXGI_FORMAT_R32_FLOAT;
-
-    if (*target != nullptr)
-    {
-        auto bufDesc = (*target)->GetDesc();
-
-        if (bufDesc.Width != width || bufDesc.Height != height || bufDesc.Format != inDesc.Format ||
-            bufDesc.Flags != inDesc.Flags)
-        {
-            (*target)->Release();
-            (*target) = nullptr;
-        }
-        else
-        {
-            return true;
-        }
-    }
-
-    D3D12_HEAP_PROPERTIES heapProperties;
-    D3D12_HEAP_FLAGS heapFlags;
-    HRESULT hr = source->GetHeapProperties(&heapProperties, &heapFlags);
-
-    if (hr != S_OK)
-    {
-        LOG_ERROR("GetHeapProperties result: {:X}", (UINT64) hr);
-        return false;
-    }
-
-    inDesc.Width = width;
-    inDesc.Height = height;
-
-    hr = device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &inDesc, state, nullptr,
-                                         IID_PPV_ARGS(target));
-
-    if (hr != S_OK)
-    {
-        LOG_ERROR("CreateCommittedResource result: {:X}", (UINT64) hr);
-        return false;
-    }
-
-    LOG_DEBUG("Created new one: {}x{}", inDesc.Width, inDesc.Height);
-
-    return true;
-}
-
-bool IFGFeature_Dx12::CreateBufferResource(ID3D12Device* device, ID3D12Resource* source,
-                                           D3D12_RESOURCE_STATES initialState, ID3D12Resource** target, bool UAV,
-                                           bool depth)
-{
-    if (device == nullptr || source == nullptr)
-        return false;
-
-    auto inDesc = source->GetDesc();
-
-    if (UAV)
-        inDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-
-    if (depth)
-        inDesc.Format = DXGI_FORMAT_R32_FLOAT;
-
-    if (*target != nullptr)
-    {
-        auto bufDesc = (*target)->GetDesc();
-
-        if (bufDesc.Width != inDesc.Width || bufDesc.Height != inDesc.Height || bufDesc.Format != inDesc.Format ||
-            bufDesc.Flags != inDesc.Flags)
-        {
-            (*target)->Release();
-            (*target) = nullptr;
-        }
-        else
-        {
-            return true;
-        }
-    }
-
-    D3D12_HEAP_PROPERTIES heapProperties;
-    D3D12_HEAP_FLAGS heapFlags;
-    HRESULT hr = source->GetHeapProperties(&heapProperties, &heapFlags);
-
-    if (hr != S_OK)
-    {
-        LOG_ERROR("GetHeapProperties result: {:X}", (UINT64) hr);
-        return false;
-    }
-
-    hr = device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &inDesc, initialState, nullptr,
-                                         IID_PPV_ARGS(target));
-
-    if (hr != S_OK)
-    {
-        LOG_ERROR("CreateCommittedResource result: {:X}", (UINT64) hr);
-        return false;
-    }
-
-    LOG_DEBUG("Created new one: {}x{}", inDesc.Width, inDesc.Height);
-
-    return true;
-}
-
-void IFGFeature_Dx12::ResourceBarrier(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* resource,
-                                      D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState)
-{
-    D3D12_RESOURCE_BARRIER barrier = {};
-    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Transition.pResource = resource;
-    barrier.Transition.StateBefore = beforeState;
-    barrier.Transition.StateAfter = afterState;
-    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-    cmdList->ResourceBarrier(1, &barrier);
-}
-
-bool IFGFeature_Dx12::CopyResource(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* source, ID3D12Resource** target,
-                                   D3D12_RESOURCE_STATES sourceState)
-{
-    auto result = true;
-
-    ResourceBarrier(cmdList, source, sourceState, D3D12_RESOURCE_STATE_COPY_SOURCE);
-
-    if (CreateBufferResource(State::Instance().currentD3D12Device, source, D3D12_RESOURCE_STATE_COPY_DEST, target))
-        cmdList->CopyResource(*target, source);
-    else
-        result = false;
-
-    ResourceBarrier(cmdList, source, D3D12_RESOURCE_STATE_COPY_SOURCE, sourceState);
-
-    return result;
-}
-
 void IFGFeature_Dx12::SetVelocity(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* velocity,
                                   D3D12_RESOURCE_STATES state)
 {
@@ -386,95 +244,19 @@ void IFGFeature_Dx12::GetHudless(ID3D12Resource* buffer, D3D12_RESOURCE_STATES b
     _gameCommandQueue->ExecuteCommandLists(1, &commandList);
 }
 
-void IFGFeature_Dx12::CreateObjects(ID3D12Device* InDevice)
+Dx12Resource* IFGFeature_Dx12::GetResource(FG_ResourceType type)
 {
-    _device = InDevice;
+    auto fIndex = GetIndex();
 
-    if (_commandAllocators[0] != nullptr)
-        ReleaseObjects();
+    if (_frameResources[fIndex].contains(type))
+        return &_frameResources[fIndex][type];
 
-    LOG_DEBUG("");
-
-    do
-    {
-        HRESULT result;
-
-        // One extra to copy things
-        for (size_t i = 0; i < BUFFER_COUNT + 1; i++)
-        {
-            ID3D12CommandAllocator* allocator = nullptr;
-            result = InDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&allocator));
-            if (result != S_OK)
-            {
-                LOG_ERROR("CreateCommandAllocators _commandAllocators[{}]: {:X}", i, (unsigned long) result);
-                break;
-            }
-            allocator->SetName(std::format(L"_commandAllocator_{}", i).c_str());
-            if (!CheckForRealObject(__FUNCTION__, allocator, (IUnknown**) &_commandAllocators[i]))
-                _commandAllocators[i] = allocator;
-
-            ID3D12GraphicsCommandList* cmdList = nullptr;
-            result = InDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, _commandAllocators[i], NULL,
-                                                 IID_PPV_ARGS(&cmdList));
-            if (result != S_OK)
-            {
-                LOG_ERROR("CreateCommandList _hudlessCommandList[{}]: {:X}", i, (unsigned long) result);
-                break;
-            }
-            cmdList->SetName(std::format(L"_hudlessCommandList_{}", i).c_str());
-            if (!CheckForRealObject(__FUNCTION__, cmdList, (IUnknown**) &_commandList[i]))
-                _commandList[i] = cmdList;
-
-            result = _commandList[i]->Close();
-            if (result != S_OK)
-            {
-                LOG_ERROR("_hudlessCommandList[{}]->Close: {:X}", i, (unsigned long) result);
-                break;
-            }
-        }
-
-    } while (false);
+    return nullptr;
 }
 
-void IFGFeature_Dx12::ReleaseObjects()
+void IFGFeature_Dx12::NewFrame()
 {
-    LOG_DEBUG("");
+    auto fIndex = GetIndex();
 
-    for (size_t i = 0; i < BUFFER_COUNT; i++)
-    {
-        if (_commandAllocators[i] != nullptr)
-        {
-            _commandAllocators[i]->Release();
-            _commandAllocators[i] = nullptr;
-        }
-
-        if (_commandList[i] != nullptr)
-        {
-            _commandList[i]->Release();
-            _commandList[i] = nullptr;
-        }
-    }
-
-    _mvFlip.reset();
-    _depthFlip.reset();
-}
-
-ID3D12CommandList* IFGFeature_Dx12::GetCommandList() { return _commandList[GetIndex()]; }
-
-bool IFGFeature_Dx12::ExecuteCommandList(ID3D12CommandQueue* queue)
-{
-    LOG_DEBUG();
-
-    if (!NeedsCommandlistExecution())
-        return true;
-
-    if (WaitingExecution())
-    {
-        auto cmdList = GetCommandList();
-        queue->ExecuteCommandLists(1, &cmdList);
-        SetExecuted();
-        return true;
-    }
-
-    return false;
+    _frameResources[fIndex].clear();
 }

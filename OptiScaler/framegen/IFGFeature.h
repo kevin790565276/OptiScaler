@@ -26,6 +26,21 @@ struct FG_Constants
     // uint32_t maxRenderHeight;
 };
 
+typedef enum FG_ResourceType
+{
+    Depth = 0,
+    Velocity,
+    HudlessColor,
+    UIColor,
+    Distortion
+};
+
+typedef enum FG_ResourceValidity
+{
+    ValidNow = 0,
+    UntilPresent
+};
+
 class IFGFeature
 {
   protected:
@@ -52,11 +67,7 @@ class IFGFeature
     bool _isActive = false;
     UINT64 _targetFrame = 0;
 
-    bool _hudlessReady[BUFFER_COUNT] {};
-    bool _depthReady[BUFFER_COUNT] {};
-    bool _mvsReady[BUFFER_COUNT] {};
-    bool _uiReady[BUFFER_COUNT] {};
-    bool _distortionFieldReady[BUFFER_COUNT] {};
+    std::map<FG_ResourceType, bool> _resourceReady[BUFFER_COUNT] {};
 
     bool _noHudless[BUFFER_COUNT] = { true, true, true, true };
     bool _noUi[BUFFER_COUNT] = { true, true, true, true };
@@ -66,40 +77,30 @@ class IFGFeature
     IID streamlineRiid {};
 
     bool CheckForRealObject(std::string functionName, IUnknown* pObject, IUnknown** ppRealObject);
+    virtual void NewFrame() = 0;
 
   public:
     OwnedMutex Mutex;
 
     virtual feature_version Version() = 0;
     virtual const char* Name() = 0;
-    virtual bool NeedsCommandlistExecution() = 0;
+    virtual bool ManualPipeline() = 0;
 
-    virtual void ReleaseObjects() = 0;
-    virtual void StopAndDestroyContext(bool destroy, bool shutDown, bool useMutex) = 0;
+    virtual bool Dispatch() = 0;
+    virtual void StopAndDestroyContext(bool destroy, bool shutDown) = 0;
 
     int GetIndex();
     UINT64 StartNewFrame();
 
-    bool DepthReady();
-    void SetDepthReady();
+    void SetResourceReady(FG_ResourceType type);
+    bool IsResourceReady(FG_ResourceType type);
 
-    bool MVsReady();
-    void SetMVsReady();
+    bool IsUsingUI();
+    bool IsUsingDistortionField();
+    bool IsUsingHudless();
 
-    bool UIReady();
-    void SetUIReady();
-    bool UsingUI();
-
-    bool DistortionFieldReady();
-    void SetDistortionFieldReady();
-    bool UsingDistortionField();
-
-    void SetHudlessReady();
-    bool HudlessReady();
-    bool UsingHudless();
-
-    bool WaitingExecution();
     void SetExecuted();
+    bool WaitingExecution();
 
     bool IsActive();
     bool IsPaused();

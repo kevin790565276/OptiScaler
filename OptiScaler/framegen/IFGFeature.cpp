@@ -11,11 +11,7 @@ UINT64 IFGFeature::StartNewFrame()
     _frameCount++;
     auto fIndex = GetIndex();
 
-    _hudlessReady[fIndex] = false;
-    _depthReady[fIndex] = false;
-    _mvsReady[fIndex] = false;
-    _uiReady[fIndex] = false;
-    _distortionFieldReady[fIndex] = false;
+    _resourceReady[fIndex].clear();
 
     _waitingExecute[fIndex] = false;
 
@@ -23,29 +19,20 @@ UINT64 IFGFeature::StartNewFrame()
     _noDistortionField[fIndex] = true;
     _noHudless[fIndex] = true;
 
+    NewFrame();
+
     return _frameCount;
 }
+
+void IFGFeature::SetResourceReady(FG_ResourceType type) { _resourceReady[GetIndex()][type] = true; }
+bool IFGFeature::IsResourceReady(FG_ResourceType type) { return _resourceReady->contains(type); }
 
 bool IFGFeature::WaitingExecution() { return _waitingExecute[GetIndex()]; }
 void IFGFeature::SetExecuted() { _waitingExecute[GetIndex()] = false; }
 
-bool IFGFeature::DepthReady() { return _depthReady[GetIndex()]; }
-void IFGFeature::SetDepthReady() { _depthReady[GetIndex()] = true; }
-
-bool IFGFeature::MVsReady() { return _mvsReady[GetIndex()]; }
-void IFGFeature::SetMVsReady() { _mvsReady[GetIndex()] = true; }
-
-bool IFGFeature::UIReady() { return _uiReady[GetIndex()]; }
-void IFGFeature::SetUIReady() { _uiReady[GetIndex()] = true; }
-bool IFGFeature::UsingUI() { return !_noUi[GetIndex()]; }
-
-bool IFGFeature::DistortionFieldReady() { return _distortionFieldReady[GetIndex()]; }
-void IFGFeature::SetDistortionFieldReady() { _distortionFieldReady[GetIndex()] = true; }
-bool IFGFeature::UsingDistortionField() { return !_noDistortionField[GetIndex()]; }
-
-bool IFGFeature::HudlessReady() { return _hudlessReady[GetIndex()]; }
-void IFGFeature::SetHudlessReady() { _hudlessReady[GetIndex()] = true; }
-bool IFGFeature::UsingHudless() { return !_noHudless[GetIndex()]; }
+bool IFGFeature::IsUsingUI() { return !_noUi[GetIndex()]; }
+bool IFGFeature::IsUsingDistortionField() { return !_noDistortionField[GetIndex()]; }
+bool IFGFeature::IsUsingHudless() { return !_noHudless[GetIndex()]; }
 
 bool IFGFeature::CheckForRealObject(std::string functionName, IUnknown* pObject, IUnknown** ppRealObject)
 {
