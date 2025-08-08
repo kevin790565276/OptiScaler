@@ -2847,6 +2847,9 @@ bool MenuCommon::RenderMenu()
                     if (currentFeature != nullptr && !currentFeature->IsFrozen() && FfxApiProxy::InitFfxDx12())
                     {
                         bool fgHudfix = Config::Instance()->FGHUDFix.value_or_default();
+                        bool disableHudfix = static_cast<bool>(State::Instance().gameQuirks & GameQuirk::DisableHudfix);
+
+                        ImGui::BeginDisabled(disableHudfix);
                         if (ImGui::Checkbox("HUDFix", &fgHudfix))
                         {
                             Config::Instance()->FGHUDFix = fgHudfix;
@@ -2854,7 +2857,12 @@ bool MenuCommon::RenderMenu()
                             State::Instance().ClearCapturedHudlesses = true;
                             State::Instance().FGchanged = true;
                         }
-                        ShowHelpMarker("Enable HUD stability fix, might cause crashes!");
+                        ImGui::EndDisabled();
+
+                        if (disableHudfix)
+                            ShowHelpMarker("Hudifx disabled due to known issues");
+                        else
+                            ShowHelpMarker("Enable HUD stability fix, might cause crashes!");
 
                         ImGui::BeginDisabled(!Config::Instance()->FGHUDFix.value_or_default());
 
