@@ -144,34 +144,36 @@ class XeLLProxy
 
         HMODULE mainModule = nullptr;
 
-        mainModule = GetModuleHandle(L"libxell.dll");
-        if (mainModule != nullptr)
+        do
         {
-            _dll = mainModule;
-            return true;
-        }
+            mainModule = GetModuleHandle(L"libxell.dll");
+            if (mainModule != nullptr)
+            {
+                _dll = mainModule;
+                break;
+            }
 
-        auto dllPath = Util::DllPath();
+            auto dllPath = Util::DllPath();
+            std::wstring libraryName = L"libxell.dll";
 
-        std::wstring libraryName;
-        libraryName = L"libxell.dll";
+            // we would like to prioritize file pointed at ini
+            // if (Config::Instance()->XeSSLibrary.has_value())
+            //{
+            //    std::filesystem::path cfgPath(Config::Instance()->XeSSLibrary.value().c_str());
+            //    LOG_INFO("Trying to load libxell.dll from ini path: {}", cfgPath.string());
 
-        // we would like to prioritize file pointed at ini
-        // if (Config::Instance()->XeSSLibrary.has_value())
-        //{
-        //    std::filesystem::path cfgPath(Config::Instance()->XeSSLibrary.value().c_str());
-        //    LOG_INFO("Trying to load libxell.dll from ini path: {}", cfgPath.string());
+            //    cfgPath = cfgPath / libraryName;
+            //    mainModule = KernelBaseProxy::LoadLibraryExW_()(cfgPath.c_str(), NULL, 0);
+            //}
 
-        //    cfgPath = cfgPath / libraryName;
-        //    mainModule = KernelBaseProxy::LoadLibraryExW_()(cfgPath.c_str(), NULL, 0);
-        //}
+            if (mainModule == nullptr)
+            {
+                std::filesystem::path libXeLLPath = dllPath.parent_path() / libraryName;
+                LOG_INFO("Trying to load libxell.dll from dll path: {}", libXeLLPath.string());
+                mainModule = KernelBaseProxy::LoadLibraryExW_()(libXeLLPath.c_str(), NULL, 0);
+            }
 
-        if (mainModule == nullptr)
-        {
-            std::filesystem::path libXeLLPath = dllPath.parent_path() / libraryName;
-            LOG_INFO("Trying to load libxell.dll from dll path: {}", libXeLLPath.string());
-            mainModule = KernelBaseProxy::LoadLibraryExW_()(libXeLLPath.c_str(), NULL, 0);
-        }
+        } while (false);
 
         if (mainModule != nullptr)
             return HookXeLL(mainModule);
