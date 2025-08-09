@@ -15,9 +15,8 @@ class FSRFG_Dx12 : public virtual IFGFeature_Dx12
   private:
     ffxContext _swapChainContext = nullptr;
     ffxContext _fgContext = nullptr;
-
-    uint32_t _lastHudlessFormat = FFX_API_SURFACE_FORMAT_UNKNOWN;
-    uint32_t _usingHudlessFormat = FFX_API_SURFACE_FORMAT_UNKNOWN;
+    FfxApiSurfaceFormat _lastHudlessFormat = FFX_API_SURFACE_FORMAT_UNKNOWN;
+    FfxApiSurfaceFormat _usingHudlessFormat = FFX_API_SURFACE_FORMAT_UNKNOWN;
 
     // One extra to copy things
     ID3D12GraphicsCommandList* _fgCommandList = nullptr;

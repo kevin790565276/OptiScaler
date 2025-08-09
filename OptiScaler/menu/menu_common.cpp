@@ -1174,7 +1174,7 @@ void MenuCommon::PopulateCombo(std::string name, CustomOptional<uint32_t, B>* va
 
         for (int n = 1; n < length; n++)
         {
-            if (disabledMask && disabledMask[n])
+            if (disabledMask[n])
                 ImGui::BeginDisabled();
 
             if (ImGui::Selectable(names[n], selected == n))
@@ -1186,7 +1186,7 @@ void MenuCommon::PopulateCombo(std::string name, CustomOptional<uint32_t, B>* va
             if (!desc[n].empty())
                 ShowTooltip(desc[n].c_str());
 
-            if (disabledMask && disabledMask[n])
+            if (disabledMask[n])
                 ImGui::EndDisabled();
         }
 
@@ -2476,71 +2476,172 @@ bool MenuCommon::RenderMenu()
                     }
                 }
 
-                const char* fgOptions[] = { "No Frame Generation", "OptiFG", "FSR-FG via Nukem's DLSSG" };
-                std::vector<std::string> fgDesc = { "", "", "Select DLSS FG in-game" };
-                std::vector<uint8_t> disabledMask = { false, false, false };
+                // clang-format off
+                const char* fgInputOptions[] = {
+                    "No Frame Generation",
+                    "Nukem's DLSSG",
+                    "FSR FG",
+                    "DLSSG via Streamline",
+                    "XeFG",
+                    "OptiFG (Upscaler)",
+                };
+                std::vector<std::string> fgInputDesc = {
+                    "",
+                    "Limited to FSR 3 FG\n\nSupports hudless out of the box\n\nUses streamline swapchain for pacing", 
+                    "Support not implemented", 
+                    "Can be used with any FG Output\n\nSupports hudless out of the box\n\nLimited to games that use Streamline v2", 
+                    "Support not implemented", 
+                    "Upscaler must be enabled\n\nCan be used with any FG Output, but might be imperfect with some\n\nTo prevent UI glitching, hudfix required",
+                };
+                std::vector<uint8_t> disabledMaskInput = { 
+                    false, 
+                    false, 
+                    true, 
+                    false, // TODO: Disable DLSSG inputs in games that can't support it
+                    true, 
+                    false 
+                };
+                // clang-format on
 
                 // OptiFG requirements
                 if (!Config::Instance()->OverlayMenu.value_or_default())
                 {
-                    disabledMask[1] = true;
-                    fgDesc[1] = "Old overlay menu is unsupported";
+                    disabledMaskInput[5] = true;
+                    fgInputDesc[5] = "Old overlay menu is unsupported";
                 }
                 else if (State::Instance().api != DX12)
                 {
-                    disabledMask[1] = true;
-                    fgDesc[1] = "Unsupported API";
+                    disabledMaskInput[5] = true;
+                    fgInputDesc[5] = "Unsupported API";
                 }
                 else if (State::Instance().isWorkingAsNvngx)
                 {
-                    disabledMask[1] = true;
-                    fgDesc[1] = "Unsupported Opti working mode";
+                    disabledMaskInput[5] = true;
+                    fgInputDesc[5] = "Unsupported Opti working mode";
                 }
                 else if ((fsr31InitTried && FfxApiProxy::Dx12Module() == nullptr) ||
                          (!fsr31InitTried && !FfxApiProxy::InitFfxDx12()))
                 {
                     fsr31InitTried = true;
-                    disabledMask[1] = true;
-                    fgDesc[1] = "amd_fidelityfx_dx12.dll is missing";
+                    disabledMaskInput[5] = true;
+                    fgInputDesc[5] = "amd_fidelityfx_dx12.dll is missing";
                 }
+
+                constexpr auto fgInputOptionsCount = sizeof(fgInputOptions) / sizeof(char*);
+
+                if (!Config::Instance()->FGInput.has_value())
+                    Config::Instance()->FGInput =
+                        Config::Instance()->FGInput.value_or_default(); // need to have a value before combo
+
+                // clang-format off
+                const char* fgOutputOptions[] = {
+                    "No Frame Generation",
+                    "FSR-FG via Nukem's",
+                    "FSR FG",
+                    "DLSSG",
+                    "XeFG"
+                };
+                std::vector<std::string> fgOutputDesc = {
+                    "",
+                    "Select DLSS FG in-game", 
+                    "FSR FG", 
+                    "Support not implemented", 
+                    "XeFG",
+                };
+                std::vector<uint8_t> disabledMaskOutput = { 
+                    false, 
+                    false, 
+                    false, 
+                    true, 
+                    false,
+                };
+                // clang-format on
 
                 // Nukem's FG mod requirements
                 if (State::Instance().api == DX11)
                 {
-                    disabledMask[2] = true;
-                    fgDesc[2] = "Unsupported API";
+                    disabledMaskInput[1] = true;
+                    fgInputDesc[1] = "Unsupported API";
+                    disabledMaskOutput[1] = true;
+                    fgOutputDesc[1] = "Unsupported API";
                 }
                 else if (State::Instance().isWorkingAsNvngx)
                 {
-                    disabledMask[2] = true;
-                    fgDesc[2] = "Unsupported Opti working mode";
+                    disabledMaskInput[1] = true;
+                    fgInputDesc[1] = "Unsupported Opti working mode";
+                    disabledMaskOutput[1] = true;
+                    fgOutputDesc[1] = "Unsupported Opti working mode";
                 }
                 else if (!State::Instance().NukemsFilesAvailable)
                 {
-                    disabledMask[2] = true;
-                    fgDesc[2] = "Missing the dlssg_to_fsr3_amd_is_better.dll file";
+                    disabledMaskInput[1] = true;
+                    fgInputDesc[1] = "Missing the dlssg_to_fsr3_amd_is_better.dll file";
+                    disabledMaskOutput[1] = true;
+                    fgOutputDesc[1] = "Missing the dlssg_to_fsr3_amd_is_better.dll file";
                 }
 
-                constexpr auto fgOptionsCount = sizeof(fgOptions) / sizeof(char*);
+                constexpr auto fgOutputOptionsCount = std::size(fgOutputOptions);
 
-                if (!Config::Instance()->FGPreset.has_value())
-                    Config::Instance()->FGPreset =
-                        Config::Instance()->FGPreset.value_or_default(); // need to have a value before combo
+                if (!Config::Instance()->FGOutput.has_value())
+                    Config::Instance()->FGOutput =
+                        Config::Instance()->FGOutput.value_or_default(); // need to have a value before combo
 
                 ImGui::SeparatorText("Frame Generation");
 
-                PopulateCombo("FG Type", reinterpret_cast<CustomOptional<uint32_t>*>(&Config::Instance()->FGPreset),
-                              fgOptions, fgDesc.data(), fgOptionsCount, disabledMask.data(), false);
+                if (ImGui::BeginTable("fgSelection", 2, ImGuiTableFlags_SizingStretchSame))
+                {
+                    ImGui::TableNextColumn();
 
-                if (State::Instance().showRestartWarning)
+                    PopulateCombo(
+                        "FG Source", reinterpret_cast<CustomOptional<uint32_t>*>(&Config::Instance()->FGInput),
+                        fgInputOptions, fgInputDesc.data(), fgInputOptionsCount, disabledMaskInput.data(), false);
+                    ShowTooltip("The data source to be used for FG");
+
+                    ImGui::TableNextColumn();
+
+                    const bool disableOutputs = Config::Instance()->FGInput.value_or_default() == FGInput::Nukems;
+
+                    ImGui::BeginDisabled(disableOutputs);
+                    PopulateCombo(
+                        "FG Output", reinterpret_cast<CustomOptional<uint32_t>*>(&Config::Instance()->FGOutput),
+                        fgOutputOptions, fgOutputDesc.data(), fgOutputOptionsCount, disabledMaskOutput.data(), false);
+                    ImGui::EndDisabled();
+
+                    if (disableOutputs)
+                        ShowTooltip("Doesn't matter with the selected FG Source");
+
+                    ImGui::EndTable();
+                }
+
+                auto static fgInputOverridden = false;
+
+                if (Config::Instance()->FGOutput == FGOutput::Nukems && !fgInputOverridden)
+                {
+                    Config::Instance()->FGInput = FGInput::Nukems;
+                    fgInputOverridden = true;
+                }
+                else if (Config::Instance()->FGInput != FGInput::Nukems && fgInputOverridden)
+                {
+                    Config::Instance()->FGOutput = FGOutput::NoFG;
+                    fgInputOverridden = false;
+                }
+
+                // if (State::Instance().activeFgInput != Config::Instance()->FGInput.value_or_default())
+                //{
+                //     State::Instance().activeFgInput = Config::Instance()->FGInput.value_or_default();
+                //     State::Instance().FGchanged = true; // Formats might be different so reconfigure
+                // }
+
+                State::Instance().fgSettingsChanged =
+                    State::Instance().activeFgOutput != Config::Instance()->FGOutput.value_or_default() ||
+                    State::Instance().activeFgInput != Config::Instance()->FGInput.value_or_default();
+
+                if (State::Instance().fgSettingsChanged)
                 {
                     ImGui::Spacing();
                     ImGui::TextColored(ImVec4(1.f, 0.f, 0.0f, 1.f), "Save INI and restart to apply the changes");
                     ImGui::Spacing();
                 }
-
-                State::Instance().showRestartWarning =
-                    State::Instance().currentFgPreset != Config::Instance()->FGPreset.value_or_default();
 
                 // FSR FG controls
                 if (State::Instance().activeFgOutput == FGOutput::FSRFG &&
@@ -2847,6 +2948,9 @@ bool MenuCommon::RenderMenu()
                     if (currentFeature != nullptr && !currentFeature->IsFrozen() && FfxApiProxy::InitFfxDx12())
                     {
                         bool fgHudfix = Config::Instance()->FGHUDFix.value_or_default();
+                        bool disableHudfix = static_cast<bool>(State::Instance().gameQuirks & GameQuirk::DisableHudfix);
+
+                        ImGui::BeginDisabled(disableHudfix);
                         if (ImGui::Checkbox("HUDFix", &fgHudfix))
                         {
                             Config::Instance()->FGHUDFix = fgHudfix;
@@ -2854,7 +2958,12 @@ bool MenuCommon::RenderMenu()
                             State::Instance().ClearCapturedHudlesses = true;
                             State::Instance().FGchanged = true;
                         }
-                        ShowHelpMarker("Enable HUD stability fix, might cause crashes!");
+                        ImGui::EndDisabled();
+
+                        if (disableHudfix)
+                            ShowHelpMarker("Hudifx disabled due to known issues");
+                        else
+                            ShowHelpMarker("Enable HUD stability fix, might cause crashes!");
 
                         ImGui::BeginDisabled(!Config::Instance()->FGHUDFix.value_or_default());
 

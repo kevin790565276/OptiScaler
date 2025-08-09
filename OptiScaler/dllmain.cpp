@@ -951,11 +951,9 @@ static void CheckQuirks()
     printQuirks(quirks);
 
     // Apply config-level quirks
-    if (quirks & GameQuirk::ForceNoUpscalerFGInputs &&
-        Config::Instance()->FGInput.value_or_default() == FGInput::Upscaler)
+    if (quirks & GameQuirk::DisableHudfix && Config::Instance()->FGInput.value_or_default() == FGInput::Upscaler)
     {
-        Config::Instance()->FGInput.set_volatile_value(FGInput::NoFG);
-        Config::Instance()->FGPreset.set_volatile_value(FGPreset::NoFG);
+        Config::Instance()->FGHUDFix.set_volatile_value(false);
     }
 
     if (quirks & GameQuirk::DisableFSR3Inputs && !Config::Instance()->EnableFsr3Inputs.has_value())
@@ -1143,7 +1141,6 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
             SetEnvironmentVariable(L"SteamNoOverlayUIDrawing", L"1");
 
         // Initial state of FG
-        State::Instance().currentFgPreset = Config::Instance()->FGPreset.value_or_default();
         State::Instance().activeFgInput = Config::Instance()->FGInput.value_or_default();
         State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
 
