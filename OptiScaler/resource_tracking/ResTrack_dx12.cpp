@@ -702,10 +702,10 @@ void ResTrack_Dx12::hkExecuteCommandLists(ID3D12CommandQueue* This, UINT NumComm
 
         std::vector<FG_ResourceType> found;
 
-        std::lock_guard<std::mutex> lock2(_resourceCommandListMutex);
-
         do
         {
+            std::lock_guard<std::mutex> lock2(_resourceCommandListMutex);
+
             if (_notFoundCmdLists.size() > 0)
             {
                 for (size_t i = 0; i < NumCommandLists; i++)
@@ -733,11 +733,16 @@ void ResTrack_Dx12::hkExecuteCommandLists(ID3D12CommandQueue* This, UINT NumComm
                 {
                     if (it->second == ppCommandLists[i])
                     {
-                        LOG_DEBUG("found {} cmdList: {:X}, queue: {:X}", magic_enum::enum_name(it->first),
-                                  (size_t) it->second, (size_t) This);
+                        LOG_DEBUG("found {} cmdList: {:X}, queue: {:X}", (UINT) it->first, (size_t) it->second,
+                                  (size_t) This);
                         fg->SetResourceReady(it->first);
                         found.push_back(it->first);
                     }
+                }
+
+                for (size_t i = 0; i < found.size(); i++)
+                {
+                    _resCmdList.erase(found[i]);
                 }
 
                 if (_resCmdList.size() <= 0)
@@ -752,7 +757,6 @@ void ResTrack_Dx12::hkExecuteCommandLists(ID3D12CommandQueue* This, UINT NumComm
 
             for (size_t i = 0; i < found.size(); i++)
             {
-                _resCmdList.erase(found[i]);
                 fg->SetCommandQueue(found[i], This);
             }
 
@@ -1565,7 +1569,7 @@ HRESULT ResTrack_Dx12::hkClose(ID3D12GraphicsCommandList* This)
             {
                 if (!fg->IsResourceReady(it->first))
                 {
-                    LOG_DEBUG("{} cmdList: {:X}", magic_enum::enum_name(it->first), (size_t) This);
+                    LOG_DEBUG("{} cmdList: {:X}", (UINT) it->first, (size_t) This);
                     _resCmdList[it->first] = it->second;
                     found.push_back(it->first);
                 }
@@ -1865,13 +1869,13 @@ void ResTrack_Dx12::ClearPossibleHudless()
 
         for (const auto& pair : _resourceCommandList[fIndex])
         {
-            LOG_WARN("{} cmdList: {:X}, not closed!", magic_enum::enum_name(pair.first), (size_t) pair.second);
+            LOG_WARN("{} cmdList: {:X}, not closed!", (UINT) pair.first, (size_t) pair.second);
             _notFoundCmdLists.push_back(pair.second);
         }
 
         for (const auto& pair : _resCmdList)
         {
-            LOG_WARN("{} cmdList: {:X}, not executed!", magic_enum::enum_name(pair.first), (size_t) pair.second);
+            LOG_WARN("{} cmdList: {:X}, not executed!", (UINT) pair.first, (size_t) pair.second);
             _notFoundCmdLists.push_back(pair.second);
         }
 
@@ -1895,6 +1899,6 @@ void ResTrack_Dx12::SetResourceCmdList(FG_ResourceType type, ID3D12GraphicsComma
             realCmdList = cmdList;
 
         _resourceCommandList[index][type] = realCmdList;
-        LOG_DEBUG("_resourceCommandList[{}][{}]: {:X}", index, magic_enum::enum_name(type), (size_t) realCmdList);
+        LOG_DEBUG("_resourceCommandList[{}][{}]: {:X}", index, (UINT) type, (size_t) realCmdList);
     }
 }

@@ -692,15 +692,15 @@ void FSRFG_Dx12::ReleaseObjects()
         _fgCommandList = nullptr;
     }
 
-    magic_enum::enum_for_each<FG_ResourceType>(
-        [this](auto val)
-        {
-            if (this->_copyCommandAllocator.contains(val))
-                this->_copyCommandAllocator[val]->Release();
+    // FG_ResourceType
+    for (size_t i = 0; i < 5; i++)
+    {
+        if (this->_copyCommandAllocator.contains((FG_ResourceType) i))
+            this->_copyCommandAllocator[(FG_ResourceType) i]->Release();
 
-            if (this->_copyCommandList.contains(val))
-                this->_copyCommandList[val]->Release();
-        });
+        if (this->_copyCommandList.contains((FG_ResourceType) i))
+            this->_copyCommandList[(FG_ResourceType) i]->Release();
+    }
 
     _copyCommandAllocator.clear();
     _copyCommandList.clear();
@@ -720,8 +720,8 @@ bool FSRFG_Dx12::ExecuteCommandList(ID3D12CommandQueue* queue)
 
     if (WaitingExecution())
     {
-        LOG_DEBUG("Executing FG cmdList: {:X} with queue: {:X}", (size_t) _fgCommandList, (size_t) _fgCommandQueue);
-        _fgCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList**) &_fgCommandList);
+        LOG_DEBUG("Executing FG cmdList: {:X} with queue: {:X}", (size_t) _fgCommandList, (size_t) _gameCommandQueue);
+        _gameCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList**) &_fgCommandList);
         SetExecuted();
         return true;
     }
@@ -737,7 +737,7 @@ void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cm
 
     if (cmdList == nullptr && validity == FG_ResourceValidity::ValidNow && _gameCommandQueue == nullptr)
     {
-        LOG_ERROR("{}, validity == ValidNow but _gameCommandQueue is nullptr!", magic_enum::enum_name(type));
+        LOG_ERROR("{}, validity == ValidNow but _gameCommandQueue is nullptr!", (UINT) type);
         return;
     }
 
@@ -755,7 +755,7 @@ void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cm
     {
         if (!_copyCommandAllocator.contains(type) || !_copyCommandList.contains(type))
         {
-            LOG_ERROR("{}, _copyCommandAllocator or _copyCommandList is nullptr!", magic_enum::enum_name(type));
+            LOG_ERROR("{}, _copyCommandAllocator or _copyCommandList is nullptr!", (UINT) type);
             return;
         }
 
@@ -783,7 +783,7 @@ void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cm
             if (!CreateBufferResource(_device, resource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, &flipOutput, true,
                                       false))
             {
-                LOG_ERROR("{}, CreateBufferResource for flip is failed!", magic_enum::enum_name(type));
+                LOG_ERROR("{}, CreateBufferResource for flip is failed!", (UINT) type);
                 return;
             }
 
@@ -817,7 +817,7 @@ void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cm
 
             if (!CreateBufferResource(_device, resource, state, &flipOutput, true, true))
             {
-                LOG_ERROR("{}, CreateBufferResource for flip is failed!", magic_enum::enum_name(type));
+                LOG_ERROR("{}, CreateBufferResource for flip is failed!", (UINT) type);
                 return;
             }
 
@@ -856,7 +856,7 @@ void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cm
 
         if (!CopyResource(cmdList, resource, &copyOutput, state))
         {
-            LOG_ERROR("{}, CopyResource error!", magic_enum::enum_name(type));
+            LOG_ERROR("{}, CopyResource error!", (UINT) type);
             return;
         }
 
@@ -881,37 +881,38 @@ void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cm
         _fgCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList**) &cmdList);
     }
 
-    LOG_TRACE("_frameResources[{}][{}]: {:X}", fIndex, magic_enum::enum_name(type), (size_t) fResource->GetResource());
+    LOG_TRACE("_frameResources[{}][{}]: {:X}", fIndex, (UINT) type, (size_t) fResource->GetResource());
 }
 
 void FSRFG_Dx12::SetResourceReady(FG_ResourceType type)
 {
     auto fIndex = GetIndex();
-
     _resourceReady[fIndex][type] = true;
 
-    auto fResource = &_frameResources[fIndex][type];
+    // auto fResource = &_frameResources[fIndex][type];
 
-    if (fResource != nullptr && fResource->validity == FG_ResourceValidity::ValidNow)
-    {
-        UINT64 fenceValue = (_frameCount * 10) + (UINT64) type;
-        fResource->fenceValue = fenceValue;
-        LOG_DEBUG("Wait {}: {}, with queue: {:X}", magic_enum::enum_name(type), fResource->fenceValue,
-                  (size_t) _fgCommandQueue);
-        _fgCommandQueue->Wait(_fgFence, fenceValue);
-    }
+    // if (fResource != nullptr && fResource->validity == FG_ResourceValidity::ValidNow)
+    //{
+    //     UINT64 fenceValue = (_frameCount * 10) + (UINT64) type;
+    //     fResource->fenceValue = fenceValue;
+    //     LOG_DEBUG("Wait {}: {}, with queue: {:X}", (UINT)type, fResource->fenceValue,
+    //               (size_t) _fgCommandQueue);
+    //     _fgCommandQueue->Wait(_fgFence, fenceValue);
+    // }
 }
 
 void FSRFG_Dx12::SetCommandQueue(FG_ResourceType type, ID3D12CommandQueue* queue)
 {
-    auto fIndex = GetIndex();
-    auto fResource = &_frameResources[fIndex][type];
+    _gameCommandQueue = queue;
 
-    if (fResource != nullptr && fResource->fenceValue > 0)
-    {
-        LOG_DEBUG("Signal {}: {} with queue: {:X}", magic_enum::enum_name(type), fResource->fenceValue, (size_t) queue);
-        queue->Signal(_fgFence, fResource->fenceValue);
-    }
+    // auto fIndex = GetIndex();
+    // auto fResource = &_frameResources[fIndex][type];
+
+    // if (fResource != nullptr && fResource->fenceValue > 0)
+    //{
+    //     LOG_DEBUG("Signal {}: {} with queue: {:X}", (UINT)type, fResource->fenceValue, (size_t)
+    //     queue); queue->Signal(_fgFence, fResource->fenceValue);
+    // }
 }
 
 void FSRFG_Dx12::CreateObjects(ID3D12Device* InDevice)
@@ -984,47 +985,46 @@ void FSRFG_Dx12::CreateObjects(ID3D12Device* InDevice)
             break;
         }
 
-        magic_enum::enum_for_each<FG_ResourceType>(
-            [this, &InDevice](auto val)
+        for (size_t i = 0; i < 5; i++)
+        {
+            auto val = (FG_ResourceType) i;
+
+            ID3D12CommandAllocator* enumAllocator = nullptr;
+            ID3D12GraphicsCommandList* enumCmdList = nullptr;
+
+            // Copy
+            auto result = InDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
+                                                           IID_PPV_ARGS(&this->_copyCommandAllocator[val]));
+            if (result != S_OK)
             {
-                ID3D12CommandAllocator* enumAllocator = nullptr;
-                ID3D12GraphicsCommandList* enumCmdList = nullptr;
+                LOG_ERROR("CreateCommandAllocators _copyCommandAllocator[{}]: {:X}", (UINT) val,
+                          (unsigned long) result);
+                return;
+            }
 
-                // Copy
-                auto result = InDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-                                                               IID_PPV_ARGS(&this->_copyCommandAllocator[val]));
-                if (result != S_OK)
-                {
-                    LOG_ERROR("CreateCommandAllocators _copyCommandAllocator[{}]: {:X}", (UINT) val,
-                              (unsigned long) result);
-                    return;
-                }
+            this->_copyCommandAllocator[val]->SetName(std::format(L"_copyCommandAllocator[{}]", (UINT) val).c_str());
+            if (CheckForRealObject(__FUNCTION__, this->_copyCommandAllocator[val], (IUnknown**) &enumAllocator))
+                this->_copyCommandAllocator[val] = enumAllocator;
 
-                this->_copyCommandAllocator[val]->SetName(
-                    std::format(L"_copyCommandAllocator[{}]", (UINT) val).c_str());
-                if (CheckForRealObject(__FUNCTION__, this->_copyCommandAllocator[val], (IUnknown**) &enumAllocator))
-                    this->_copyCommandAllocator[val] = enumAllocator;
+            result = InDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, this->_copyCommandAllocator[val],
+                                                 NULL, IID_PPV_ARGS(&this->_copyCommandList[val]));
+            if (result != S_OK)
+            {
+                LOG_ERROR("CreateCommandList _copyCommandList[{}]: {:X}", (UINT) val, (unsigned long) result);
+                return;
+            }
 
-                result =
-                    InDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, this->_copyCommandAllocator[val],
-                                                NULL, IID_PPV_ARGS(&this->_copyCommandList[val]));
-                if (result != S_OK)
-                {
-                    LOG_ERROR("CreateCommandList _copyCommandList[{}]: {:X}", (UINT) val, (unsigned long) result);
-                    return;
-                }
+            this->_copyCommandList[val]->SetName(std::format(L"_copyCommandAllocator[{}]", (UINT) val).c_str());
+            if (CheckForRealObject(__FUNCTION__, this->_copyCommandList[val], (IUnknown**) &enumCmdList))
+                this->_copyCommandList[val] = enumCmdList;
 
-                this->_copyCommandList[val]->SetName(std::format(L"_copyCommandAllocator[{}]", (UINT) val).c_str());
-                if (CheckForRealObject(__FUNCTION__, this->_copyCommandList[val], (IUnknown**) &enumCmdList))
-                    this->_copyCommandList[val] = enumCmdList;
-
-                result = this->_copyCommandList[val]->Close();
-                if (result != S_OK)
-                {
-                    LOG_ERROR("_copyCommandList[{}]->Close: {:X}", (UINT) val, (unsigned long) result);
-                    return;
-                }
-            });
+            result = this->_copyCommandList[val]->Close();
+            if (result != S_OK)
+            {
+                LOG_ERROR("_copyCommandList[{}]->Close: {:X}", (UINT) val, (unsigned long) result);
+                return;
+            }
+        }
 
     } while (false);
 }

@@ -112,9 +112,8 @@ bool IFGFeature_Dx12::CreateBufferResource(ID3D12Device* device, ID3D12Resource*
 
     auto inDesc = source->GetDesc();
 
-    inDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
     if (UAV)
-        inDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+        inDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
     if (depth)
         inDesc.Format = DXGI_FORMAT_R32_FLOAT;
@@ -184,4 +183,3 @@ bool IFGFeature_Dx12::CopyResource(ID3D12GraphicsCommandList* cmdList, ID3D12Res
 
     return result;
 }
-
