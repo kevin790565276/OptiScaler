@@ -1580,6 +1580,7 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D12_EvaluateFeature(ID3D12GraphicsCom
             fg->SetFrameTimeDelta(State::Instance().lastFrameTime);
             fg->SetMVScale(mvScaleX, mvScaleY);
             fg->SetReset(reset);
+            fg->SetInterpolationRect(deviceContext->feature->DisplayWidth(), deviceContext->feature->DisplayHeight());
 
             Hudfix_Dx12::UpscaleStart();
         }
@@ -1617,10 +1618,24 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D12_EvaluateFeature(ID3D12GraphicsCom
             InParameters->Get(NVSDK_NGX_Parameter_MotionVectors, (void**) &paramVelocity);
 
         if (paramVelocity != nullptr)
-            fg->SetResource(FG_ResourceType::Velocity, commandList, paramVelocity,
-                            (D3D12_RESOURCE_STATES) Config::Instance()->MVResourceBarrier.value_or(
-                                D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE),
-                            FG_ResourceValidity::ValidNow);
+        {
+            if (deviceContext->feature->LowResMV())
+            {
+                fg->SetResource(FG_ResourceType::Velocity, commandList, paramVelocity,
+                                deviceContext->feature->RenderWidth(), deviceContext->feature->RenderHeight(),
+                                (D3D12_RESOURCE_STATES) Config::Instance()->MVResourceBarrier.value_or(
+                                    D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE),
+                                FG_ResourceValidity::ValidNow);
+            }
+            else
+            {
+                fg->SetResource(FG_ResourceType::Velocity, commandList, paramVelocity,
+                                deviceContext->feature->DisplayWidth(), deviceContext->feature->DisplayHeight(),
+                                (D3D12_RESOURCE_STATES) Config::Instance()->MVResourceBarrier.value_or(
+                                    D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE),
+                                FG_ResourceValidity::ValidNow);
+            }
+        }
 
         ID3D12Resource* paramDepth = nullptr;
         if (InParameters->Get(NVSDK_NGX_Parameter_Depth, &paramDepth) != NVSDK_NGX_Result_Success)
@@ -1646,6 +1661,7 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D12_EvaluateFeature(ID3D12GraphicsCom
                     {
                         DepthScale->SetBufferState(InCmdList, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
                         fg->SetResource(FG_ResourceType::Depth, commandList, DepthScale->Buffer(),
+                                        deviceContext->feature->RenderWidth(), deviceContext->feature->RenderHeight(),
                                         D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
                                         FG_ResourceValidity::UntilPresent);
                         done = true;
@@ -1654,7 +1670,8 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D12_EvaluateFeature(ID3D12GraphicsCom
             }
 
             if (!done)
-                fg->SetResource(FG_ResourceType::Depth, commandList, paramDepth,
+                fg->SetResource(FG_ResourceType::Depth, commandList, paramDepth, deviceContext->feature->RenderWidth(),
+                                deviceContext->feature->RenderHeight(),
                                 (D3D12_RESOURCE_STATES) Config::Instance()->DepthResourceBarrier.value_or(
                                     D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE),
                                 FG_ResourceValidity::ValidNow);

@@ -21,12 +21,11 @@ class FSRFG_Dx12 : public virtual IFGFeature_Dx12
     // One extra to copy things
     ID3D12GraphicsCommandList* _fgCommandList = nullptr;
     ID3D12CommandAllocator* _fgCommandAllocator = nullptr;
-    ID3D12CommandQueue* _fgCommandQueue = nullptr;
-    ID3D12Fence* _fgFence = nullptr;
 
+    // For copy operations
     std::map<FG_ResourceType, ID3D12Resource*> _resourceCopy[BUFFER_COUNT] {};
-    std::map<FG_ResourceType, ID3D12CommandAllocator*> _copyCommandAllocator {};
     std::map<FG_ResourceType, ID3D12GraphicsCommandList*> _copyCommandList {};
+    std::map<FG_ResourceType, ID3D12CommandAllocator*> _copyCommandAllocator {};
 
     static FfxApiResourceState GetFfxApiState(D3D12_RESOURCE_STATES state)
     {
@@ -57,11 +56,14 @@ class FSRFG_Dx12 : public virtual IFGFeature_Dx12
         }
     }
 
+    bool ExecuteCommandList();
+    bool Dispatch();
+    void ConfigureFramePaceTuning();
+
   public:
     // IFGFeature
     const char* Name() override final;
     feature_version Version() override final;
-    bool ManualPipeline() override final { return true; }
 
     void* FrameGenerationContext() override final;
     void* SwapchainContext() override final;
@@ -80,19 +82,12 @@ class FSRFG_Dx12 : public virtual IFGFeature_Dx12
     void ReleaseObjects() override final;
     void CreateObjects(ID3D12Device* InDevice) override final;
 
-    bool Dispatch() override final;
+    bool Present() override final;
 
-    ID3D12CommandList* GetCommandList() override final;
-    bool ExecuteCommandList(ID3D12CommandQueue* queue) override final;
-
-    void SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* resource,
-                     D3D12_RESOURCE_STATES state, FG_ResourceValidity validity) override final;
-
+    void SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* resource, UINT width,
+                     UINT height, D3D12_RESOURCE_STATES state, FG_ResourceValidity validity) override final;
     void SetResourceReady(FG_ResourceType type) override final;
     void SetCommandQueue(FG_ResourceType type, ID3D12CommandQueue* queue) override final;
-
-    // Methods
-    void ConfigureFramePaceTuning();
 
     ffxReturnCode_t DispatchCallback(ffxDispatchDescFrameGeneration* params);
 

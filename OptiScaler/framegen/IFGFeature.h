@@ -60,6 +60,8 @@ class IFGFeature
     float _cameraForward[3] {};  ///< The camera forward normalized vector in world space.
     float _meterFactor = 0.0;
     float _ftDelta = 0.0;
+    UINT _interpolationWidth = 0;
+    UINT _interpolationHeight = 0;
     UINT _reset = 0;
 
     UINT64 _frameCount = 0;
@@ -85,9 +87,8 @@ class IFGFeature
 
     virtual feature_version Version() = 0;
     virtual const char* Name() = 0;
-    virtual bool ManualPipeline() = 0;
 
-    virtual bool Dispatch() = 0;
+    virtual bool Present() = 0;
     virtual void StopAndDestroyContext(bool destroy, bool shutDown) = 0;
 
     int GetIndex();
@@ -113,6 +114,7 @@ class IFGFeature
     void SetCameraData(float cameraPosition[3], float cameraUp[3], float cameraRight[3], float cameraForward[3]);
     void SetFrameTimeDelta(float delta);
     void SetReset(UINT reset);
+    void SetInterpolationRect(UINT width, UINT height);
 
     void ResetCounters();
     void UpdateTarget();

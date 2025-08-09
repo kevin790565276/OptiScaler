@@ -167,8 +167,8 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         const auto validity =
             (tag.lifecycle == sl::eOnlyValidNow) ? FG_ResourceValidity::ValidNow : FG_ResourceValidity::UntilPresent;
-        fgOutput->SetResource(FG_ResourceType::HudlessColor, cmdBuffer, hudlessResource,
-                              (D3D12_RESOURCE_STATES) tag.resource->state, validity);
+        fgOutput->SetResource(FG_ResourceType::HudlessColor, cmdBuffer, hudlessResource, tag.resource->width,
+                              tag.resource->height, (D3D12_RESOURCE_STATES) tag.resource->state, validity);
 
         auto static lastFormat = DXGI_FORMAT_UNKNOWN;
         auto format = hudlessResource->GetDesc().Format;
@@ -194,8 +194,8 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         const auto validity =
             (tag.lifecycle == sl::eOnlyValidNow) ? FG_ResourceValidity::ValidNow : FG_ResourceValidity::UntilPresent;
-        fgOutput->SetResource(FG_ResourceType::Depth, cmdBuffer, depthResource,
-                              (D3D12_RESOURCE_STATES) tag.resource->state, validity);
+        fgOutput->SetResource(FG_ResourceType::Depth, cmdBuffer, depthResource, tag.resource->width,
+                              tag.resource->height, (D3D12_RESOURCE_STATES) tag.resource->state, validity);
     }
     else if (tag.type == sl::kBufferTypeMotionVectors)
     {
@@ -209,8 +209,8 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         const auto validity =
             (tag.lifecycle == sl::eOnlyValidNow) ? FG_ResourceValidity::ValidNow : FG_ResourceValidity::UntilPresent;
-        fgOutput->SetResource(FG_ResourceType::Velocity, cmdBuffer, mvResource,
-                              (D3D12_RESOURCE_STATES) tag.resource->state, validity);
+        fgOutput->SetResource(FG_ResourceType::Velocity, cmdBuffer, mvResource, tag.resource->width,
+                              tag.resource->height, (D3D12_RESOURCE_STATES) tag.resource->state, validity);
     }
     else if (tag.type == sl::kBufferTypeUIColorAndAlpha)
     {
@@ -226,8 +226,8 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
             const auto validity = (tag.lifecycle == sl::eOnlyValidNow) ? FG_ResourceValidity::ValidNow
                                                                        : FG_ResourceValidity::UntilPresent;
-            fgOutput->SetResource(FG_ResourceType::UIColor, cmdBuffer, uiResource,
-                                  (D3D12_RESOURCE_STATES) tag.resource->state, validity);
+            fgOutput->SetResource(FG_ResourceType::UIColor, cmdBuffer, uiResource, tag.resource->width,
+                                  tag.resource->height, (D3D12_RESOURCE_STATES) tag.resource->state, validity);
         }
     }
     else if (tag.type == sl::kBufferTypeBidirectionalDistortionField)
@@ -242,8 +242,8 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         const auto validity =
             (tag.lifecycle == sl::eOnlyValidNow) ? FG_ResourceValidity::ValidNow : FG_ResourceValidity::UntilPresent;
-        fgOutput->SetResource(FG_ResourceType::Distortion, cmdBuffer, distortionFieldResource,
-                              (D3D12_RESOURCE_STATES) tag.resource->state, validity);
+        fgOutput->SetResource(FG_ResourceType::Distortion, cmdBuffer, distortionFieldResource, tag.resource->width,
+                              tag.resource->height, (D3D12_RESOURCE_STATES) tag.resource->state, validity);
     }
 
     if (readyForDispatch())
@@ -363,7 +363,7 @@ bool Sl_Inputs_Dx12::dispatchFG(ID3D12GraphicsCommandList* cmdBuffer)
 
     fgOutput->SetReset(slConstsRef.reset == sl::Boolean::eTrue);
 
-    return fgOutput->Dispatch();
+    return true;
 }
 
 void Sl_Inputs_Dx12::markLastSendAsRequired()

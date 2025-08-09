@@ -271,19 +271,7 @@ static HRESULT hkFGPresent(void* This, UINT SyncInterval, UINT Flags)
     if (willPresent && State::Instance().currentCommandQueue != nullptr &&
         State::Instance().activeFgInput == FGInput::Upscaler && fg != nullptr && fg->IsActive())
     {
-        if (!fg->IsPaused() && !fg->IsDispatched())
-        {
-            LOG_WARN("Dispatch FG from present");
-            fg->Dispatch();
-        }
-
-        // ResTrack_Dx12::ExecuteWaitingCommandLists();
-
-        if (!fg->IsPaused() && fg->WaitingExecution())
-        {
-            LOG_WARN("Execute FG commandlist from present");
-            fg->ExecuteCommandList(State::Instance().currentCommandQueue);
-        }
+        fg->Present();
     }
 
     State::Instance().slFGInputs.markLastSendAsRequired();
@@ -860,11 +848,11 @@ static HRESULT hkCreateSwapChain(IDXGIFactory* pFactory, IUnknown* pDevice, DXGI
         Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
         State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
     }
-    // else if (State::Instance().activeFgOutput == FGOutput::XeFG && !XeFGProxy::InitXeFG())
-    //{
-    //     Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
-    //     State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
-    // }
+    else if (State::Instance().activeFgOutput == FGOutput::XeFG && !XeFGProxy::InitXeFG())
+    {
+        Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
+        State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
+    }
 
     ID3D12CommandQueue* real = nullptr;
     if (!CheckForRealObject(__FUNCTION__, pDevice, (IUnknown**) &real))
@@ -885,8 +873,8 @@ static HRESULT hkCreateSwapChain(IDXGIFactory* pFactory, IUnknown* pDevice, DXGI
         {
             if (State::Instance().activeFgOutput == FGOutput::FSRFG)
                 State::Instance().currentFG = new FSRFG_Dx12();
-            // else if (State::Instance().activeFgOutput == FGOutput::XeFG)
-            //     State::Instance().currentFG = new XeFG_Dx12();
+            else if (State::Instance().activeFgOutput == FGOutput::XeFG)
+                State::Instance().currentFG = new XeFG_Dx12();
         }
 
         HooksDx::ReleaseDx12SwapChain(pDesc->OutputWindow);
@@ -1162,11 +1150,11 @@ static HRESULT hkCreateSwapChainForHwnd(IDXGIFactory* This, IUnknown* pDevice, H
         Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
         State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
     }
-    // else if (State::Instance().activeFgOutput == FGOutput::XeFG && !XeFGProxy::InitXeFG())
-    //{
-    //     Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
-    //     State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
-    // }
+    else if (State::Instance().activeFgOutput == FGOutput::XeFG && !XeFGProxy::InitXeFG())
+    {
+        Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
+        State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
+    }
 
     ID3D12CommandQueue* real = nullptr;
     if (!CheckForRealObject(__FUNCTION__, pDevice, (IUnknown**) &real))
@@ -1186,8 +1174,8 @@ static HRESULT hkCreateSwapChainForHwnd(IDXGIFactory* This, IUnknown* pDevice, H
         {
             if (State::Instance().activeFgOutput == FGOutput::FSRFG)
                 State::Instance().currentFG = new FSRFG_Dx12();
-            // else if (State::Instance().activeFgOutput == FGOutput::XeFG)
-            //     State::Instance().currentFG = new XeFG_Dx12();
+            else if (State::Instance().activeFgOutput == FGOutput::XeFG)
+                State::Instance().currentFG = new XeFG_Dx12();
         }
 
         HooksDx::ReleaseDx12SwapChain(hWnd);

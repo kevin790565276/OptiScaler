@@ -94,6 +94,12 @@ void IFGFeature::SetFrameTimeDelta(float delta) { _ftDelta = delta; }
 
 void IFGFeature::SetReset(UINT reset) { _reset = reset; }
 
+void IFGFeature::SetInterpolationRect(UINT width, UINT height)
+{
+    _interpolationWidth = width;
+    _interpolationHeight = height;
+}
+
 void IFGFeature::ResetCounters()
 {
     _frameCount = 0;

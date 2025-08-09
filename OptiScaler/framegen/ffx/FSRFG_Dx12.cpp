@@ -158,7 +158,6 @@ bool FSRFG_Dx12::Dispatch()
     // use swapchain buffer info
     DXGI_SWAP_CHAIN_DESC scDesc1 {};
     bool hasSwapChainDesc = State::Instance().currentSwapchain->GetDesc(&scDesc1) == S_OK;
-    auto feature = State::Instance().currentFeature;
 
     int bufferWidth = hasSwapChainDesc ? scDesc1.BufferDesc.Width : 0;
     int bufferHeight = hasSwapChainDesc ? scDesc1.BufferDesc.Height : 0;
@@ -168,26 +167,10 @@ bool FSRFG_Dx12::Dispatch()
     int defaultWidth = 0;
     int defaultHeight = 0;
 
-    if (feature)
-    {
-        int displayWidth = feature->DisplayWidth();
-        int displayHeight = feature->DisplayHeight();
-
-        defaultLeft = hasSwapChainDesc ? (bufferWidth - displayWidth) / 2 : 0;
-        defaultTop = hasSwapChainDesc ? (bufferHeight - displayHeight) / 2 : 0;
-        defaultWidth = displayWidth;
-        defaultHeight = displayHeight;
-    }
-    else
-    {
-        defaultLeft = 0;
-        defaultTop = 0;
-        defaultWidth = hasSwapChainDesc ? bufferWidth : 0;
-        defaultHeight = hasSwapChainDesc ? bufferHeight : 0;
-
-        if (!hasSwapChainDesc)
-            LOG_ERROR("No swapchain or feature, invalid FG Rect values");
-    }
+    defaultLeft = hasSwapChainDesc ? (bufferWidth - _interpolationWidth) / 2 : 0;
+    defaultTop = hasSwapChainDesc ? (bufferHeight - _interpolationHeight) / 2 : 0;
+    defaultWidth = _interpolationWidth;
+    defaultHeight = _interpolationHeight;
 
     m_FrameGenerationConfig.generationRect.left = Config::Instance()->FGRectLeft.value_or(defaultLeft);
     m_FrameGenerationConfig.generationRect.top = Config::Instance()->FGRectTop.value_or(defaultTop);
@@ -701,7 +684,7 @@ void FSRFG_Dx12::ReleaseObjects()
         _fgCommandList = nullptr;
     }
 
-    // FG_ResourceType
+    // For each FG_ResourceType
     for (size_t i = 0; i < 5; i++)
     {
         if (this->_copyCommandAllocator.contains((FG_ResourceType) i))
@@ -718,14 +701,9 @@ void FSRFG_Dx12::ReleaseObjects()
     _depthFlip.reset();
 }
 
-ID3D12CommandList* FSRFG_Dx12::GetCommandList() { return _fgCommandList; }
-
-bool FSRFG_Dx12::ExecuteCommandList(ID3D12CommandQueue* queue)
+bool FSRFG_Dx12::ExecuteCommandList()
 {
     LOG_DEBUG();
-
-    if (!ManualPipeline())
-        return true;
 
     if (WaitingExecution())
     {
@@ -739,20 +717,26 @@ bool FSRFG_Dx12::ExecuteCommandList(ID3D12CommandQueue* queue)
 }
 
 void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* resource,
-                             D3D12_RESOURCE_STATES state, FG_ResourceValidity validity)
+                             UINT width, UINT height, D3D12_RESOURCE_STATES state, FG_ResourceValidity validity)
 {
     if (resource == nullptr)
         return;
 
     if (cmdList == nullptr && validity == FG_ResourceValidity::ValidNow && _gameCommandQueue == nullptr)
     {
-        LOG_ERROR("{}, validity == ValidNow but _gameCommandQueue is nullptr!", (UINT) type);
+        LOG_ERROR("{}, validity == ValidNow but _gameCommandQueue is nullptr!", magic_enum::enum_name(type));
         return;
     }
 
     auto fIndex = GetIndex();
     _frameResources[fIndex][type] = {};
     auto fResource = &_frameResources[fIndex][type];
+    fResource->type = type;
+    fResource->state = state;
+    fResource->validity = validity;
+    fResource->resource = resource;
+    fResource->width = width;
+    fResource->height = height;
 
     auto willFlip = State::Instance().activeFgInput == FGInput::Upscaler &&
                     Config::Instance()->FGResourceFlip.value_or_default() &&
@@ -764,7 +748,7 @@ void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cm
     {
         if (!_copyCommandAllocator.contains(type) || !_copyCommandList.contains(type))
         {
-            LOG_ERROR("{}, _copyCommandAllocator or _copyCommandList is nullptr!", (UINT) type);
+            LOG_ERROR("{}, _copyCommandAllocator or _copyCommandList is nullptr!", magic_enum::enum_name(type));
             return;
         }
 
@@ -774,11 +758,6 @@ void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cm
         cmdList->Reset(allocator, nullptr);
         usingLocalCmdList = true;
     }
-
-    fResource->type = type;
-    fResource->state = state;
-    fResource->validity = validity;
-    fResource->resource = resource;
 
     // Resource flipping
     if (willFlip && _device != nullptr)
@@ -792,7 +771,7 @@ void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cm
             if (!CreateBufferResource(_device, resource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, &flipOutput, true,
                                       false))
             {
-                LOG_ERROR("{}, CreateBufferResource for flip is failed!", (UINT) type);
+                LOG_ERROR("{}, CreateBufferResource for flip is failed!", magic_enum::enum_name(type));
                 return;
             }
 
@@ -826,7 +805,7 @@ void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cm
 
             if (!CreateBufferResource(_device, resource, state, &flipOutput, true, true))
             {
-                LOG_ERROR("{}, CreateBufferResource for flip is failed!", (UINT) type);
+                LOG_ERROR("{}, CreateBufferResource for flip is failed!", magic_enum::enum_name(type));
                 return;
             }
 
@@ -865,7 +844,7 @@ void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cm
 
         if (!CopyResource(cmdList, resource, &copyOutput, state))
         {
-            LOG_ERROR("{}, CopyResource error!", (UINT) type);
+            LOG_ERROR("{}, CopyResource error!", magic_enum::enum_name(type));
             return;
         }
 
@@ -887,42 +866,15 @@ void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cm
     if (usingLocalCmdList)
     {
         cmdList->Close();
-        _fgCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList**) &cmdList);
+        _gameCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList**) &cmdList);
     }
 
-    LOG_TRACE("_frameResources[{}][{}]: {:X}", fIndex, (UINT) type, (size_t) fResource->GetResource());
+    LOG_TRACE("_frameResources[{}][{}]: {:X}", fIndex, magic_enum::enum_name(type), (size_t) fResource->GetResource());
 }
 
-void FSRFG_Dx12::SetResourceReady(FG_ResourceType type)
-{
-    auto fIndex = GetIndex();
-    _resourceReady[fIndex][type] = true;
+void FSRFG_Dx12::SetResourceReady(FG_ResourceType type) { _resourceReady[GetIndex()][type] = true; }
 
-    // auto fResource = &_frameResources[fIndex][type];
-
-    // if (fResource != nullptr && fResource->validity == FG_ResourceValidity::ValidNow)
-    //{
-    //     UINT64 fenceValue = (_frameCount * 10) + (UINT64) type;
-    //     fResource->fenceValue = fenceValue;
-    //     LOG_DEBUG("Wait {}: {}, with queue: {:X}", (UINT)type, fResource->fenceValue,
-    //               (size_t) _fgCommandQueue);
-    //     _fgCommandQueue->Wait(_fgFence, fenceValue);
-    // }
-}
-
-void FSRFG_Dx12::SetCommandQueue(FG_ResourceType type, ID3D12CommandQueue* queue)
-{
-    _gameCommandQueue = queue;
-
-    // auto fIndex = GetIndex();
-    // auto fResource = &_frameResources[fIndex][type];
-
-    // if (fResource != nullptr && fResource->fenceValue > 0)
-    //{
-    //     LOG_DEBUG("Signal {}: {} with queue: {:X}", (UINT)type, fResource->fenceValue, (size_t)
-    //     queue); queue->Signal(_fgFence, fResource->fenceValue);
-    // }
-}
+void FSRFG_Dx12::SetCommandQueue(FG_ResourceType type, ID3D12CommandQueue* queue) { _gameCommandQueue = queue; }
 
 void FSRFG_Dx12::CreateObjects(ID3D12Device* InDevice)
 {
@@ -941,34 +893,10 @@ void FSRFG_Dx12::CreateObjects(ID3D12Device* InDevice)
         ID3D12CommandQueue* cmdQueue = nullptr;
 
         // FG
-        D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-        queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-        queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-
-        result = InDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&_fgCommandQueue));
-
-        if (result != S_OK || _fgCommandQueue == nullptr)
-        {
-            LOG_DEBUG("CreateCommandQueue _fgCommandQueue: {0:X}", result);
-            break;
-        }
-
-        _fgCommandQueue->SetName(L"_fgCommandQueue");
-        if (CheckForRealObject(__FUNCTION__, _fgCommandQueue, (IUnknown**) &cmdQueue))
-            _fgCommandQueue = cmdQueue;
-
         result = InDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&_fgCommandAllocator));
         if (result != S_OK)
         {
             LOG_ERROR("CreateCommandAllocators _fgCommandAllocator: {:X}", (unsigned long) result);
-            break;
-        }
-
-        result = InDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&_fgFence));
-
-        if (result != S_OK)
-        {
-            LOG_ERROR("CreateFence _fgFence: {0:X}", result);
             break;
         }
 
@@ -994,6 +922,7 @@ void FSRFG_Dx12::CreateObjects(ID3D12Device* InDevice)
             break;
         }
 
+        // For each FG_ResourceType
         for (size_t i = 0; i < 5; i++)
         {
             auto val = (FG_ResourceType) i;
@@ -1036,4 +965,21 @@ void FSRFG_Dx12::CreateObjects(ID3D12Device* InDevice)
         }
 
     } while (false);
+}
+
+bool FSRFG_Dx12::Present()
+{
+    auto result = false;
+
+    if (!IsPaused() && !IsDispatched())
+    {
+        Dispatch();
+    }
+
+    if (!IsPaused() && WaitingExecution())
+    {
+        result = ExecuteCommandList();
+    }
+
+    return result;
 }

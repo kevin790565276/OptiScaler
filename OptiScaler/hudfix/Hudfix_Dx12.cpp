@@ -452,6 +452,13 @@ bool Hudfix_Dx12::CheckForHudless(std::string callerName, ID3D12GraphicsCommandL
             break;
         }
 
+        DXGI_SWAP_CHAIN_DESC scDesc {};
+        if (State::Instance().currentSwapchain->GetDesc(&scDesc) != S_OK)
+        {
+            LOG_WARN("Can't get swapchain desc!");
+            break;
+        }
+
         // Prevent double capture
         LOG_DEBUG("Waiting _checkMutex");
         std::lock_guard<std::mutex> lock(_checkMutex);
@@ -554,14 +561,6 @@ bool Hudfix_Dx12::CheckForHudless(std::string callerName, ID3D12GraphicsCommandL
 
         auto fIndex = GetIndex();
 
-        DXGI_SWAP_CHAIN_DESC scDesc {};
-        if (State::Instance().currentSwapchain->GetDesc(&scDesc) != S_OK)
-        {
-            LOG_WARN("Can't get swapchain desc!");
-            _captureCounter[fIndex]--;
-            break;
-        }
-
         LOG_TRACE("Capture resource: {:X}, index: {}", (size_t) resource->buffer, fIndex);
 
         if (_commandQueue == nullptr && !CreateObjects())
@@ -600,13 +599,6 @@ bool Hudfix_Dx12::CheckForHudless(std::string callerName, ID3D12GraphicsCommandL
         }
         else
         {
-            DXGI_SWAP_CHAIN_DESC scDesc {};
-            if (State::Instance().currentSwapchain->GetDesc(&scDesc) != S_OK)
-            {
-                LOG_WARN("Can't get swapchain desc!");
-                break;
-            }
-
             if (CreateBufferResourceWithSize(State::Instance().currentD3D12Device, resource,
                                              D3D12_RESOURCE_STATE_COPY_DEST, &_captureBuffer[fIndex],
                                              scDesc.BufferDesc.Width, scDesc.BufferDesc.Height))
@@ -705,6 +697,7 @@ bool Hudfix_Dx12::CheckForHudless(std::string callerName, ID3D12GraphicsCommandL
 
                 if (fg != nullptr)
                     fg->SetResource(FG_ResourceType::HudlessColor, cmdList, _formatTransfer[fIndex]->Buffer(),
+                                    scDesc.BufferDesc.Width, scDesc.BufferDesc.Height,
                                     D3D12_RESOURCE_STATE_UNORDERED_ACCESS, FG_ResourceValidity::JustTrackCmdlist);
             }
             else
@@ -723,8 +716,9 @@ bool Hudfix_Dx12::CheckForHudless(std::string callerName, ID3D12GraphicsCommandL
             auto fg = reinterpret_cast<IFGFeature_Dx12*>(State::Instance().currentFG);
 
             if (fg != nullptr)
-                fg->SetResource(FG_ResourceType::HudlessColor, cmdList, _captureBuffer[fIndex],
-                                D3D12_RESOURCE_STATE_COPY_DEST, FG_ResourceValidity::JustTrackCmdlist);
+                fg->SetResource(FG_ResourceType::HudlessColor, cmdList, _captureBuffer[fIndex], scDesc.BufferDesc.Width,
+                                scDesc.BufferDesc.Height, D3D12_RESOURCE_STATE_COPY_DEST,
+                                FG_ResourceValidity::JustTrackCmdlist);
         }
 
         if (State::Instance().FGcaptureResources)
