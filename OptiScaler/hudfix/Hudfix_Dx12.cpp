@@ -332,9 +332,9 @@ void Hudfix_Dx12::HudlessFound(ID3D12GraphicsCommandList* cmdList)
     // Set it above 1000 to prvent capture
     _captureCounter[GetIndex()] = 9999;
 
-    auto fg = State::Instance().currentFG;
-    if (fg != nullptr)
-        fg->Dispatch();
+    // auto fg = State::Instance().currentFG;
+    // if (fg != nullptr)
+    //     fg->Dispatch();
 
     // Increase counter
     _fgCounter++;
@@ -704,8 +704,8 @@ bool Hudfix_Dx12::CheckForHudless(std::string callerName, ID3D12GraphicsCommandL
                 auto fg = reinterpret_cast<IFGFeature_Dx12*>(State::Instance().currentFG);
 
                 if (fg != nullptr)
-                    fg->SetHudless(cmdList, _formatTransfer[fIndex]->Buffer(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-                                   false);
+                    fg->SetResource(FG_ResourceType::HudlessColor, cmdList, _formatTransfer[fIndex]->Buffer(),
+                                    D3D12_RESOURCE_STATE_UNORDERED_ACCESS, FG_ResourceValidity::JustTrackCmdlist);
             }
             else
             {
@@ -723,7 +723,8 @@ bool Hudfix_Dx12::CheckForHudless(std::string callerName, ID3D12GraphicsCommandL
             auto fg = reinterpret_cast<IFGFeature_Dx12*>(State::Instance().currentFG);
 
             if (fg != nullptr)
-                fg->SetHudless(cmdList, _captureBuffer[fIndex], D3D12_RESOURCE_STATE_COPY_DEST, false);
+                fg->SetResource(FG_ResourceType::HudlessColor, cmdList, _captureBuffer[fIndex],
+                                D3D12_RESOURCE_STATE_COPY_DEST, FG_ResourceValidity::JustTrackCmdlist);
         }
 
         if (State::Instance().FGcaptureResources)

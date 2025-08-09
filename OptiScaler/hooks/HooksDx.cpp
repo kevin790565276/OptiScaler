@@ -271,7 +271,7 @@ static HRESULT hkFGPresent(void* This, UINT SyncInterval, UINT Flags)
     if (willPresent && State::Instance().currentCommandQueue != nullptr &&
         State::Instance().activeFgInput == FGInput::Upscaler && fg != nullptr && fg->IsActive())
     {
-        if (!fg->IsPaused() && !fg->IsDispatched() && fg->MVsReady() && fg->DepthReady())
+        if (!fg->IsPaused() && !fg->IsDispatched())
         {
             LOG_WARN("Dispatch FG from present");
             fg->Dispatch();
@@ -300,14 +300,14 @@ static HRESULT hkFGPresent(void* This, UINT SyncInterval, UINT Flags)
         Hudfix_Dx12::PresentStart();
     }
 
-    if (willPresent && fg != nullptr && fg->UsingUI())
-    {
-        ID3D12Resource* backBuffer = nullptr;
-        auto swapchain = ((IDXGISwapChain3*) This);
-        auto swapchainIndex = swapchain->GetCurrentBackBufferIndex();
-        swapchain->GetBuffer(swapchainIndex, IID_PPV_ARGS(&backBuffer));
-        fg->GetHudless(backBuffer, D3D12_RESOURCE_STATE_PRESENT);
-    }
+    // if (willPresent && fg != nullptr && fg->IsUsingUI())
+    //{
+    //     ID3D12Resource* backBuffer = nullptr;
+    //     auto swapchain = ((IDXGISwapChain3*) This);
+    //     auto swapchainIndex = swapchain->GetCurrentBackBufferIndex();
+    //     swapchain->GetBuffer(swapchainIndex, IID_PPV_ARGS(&backBuffer));
+    //     fg->GetHudless(backBuffer, D3D12_RESOURCE_STATE_PRESENT);
+    // }
 
     HRESULT result;
     result = o_FGSCPresent(This, SyncInterval, Flags);
@@ -422,8 +422,14 @@ static HRESULT hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Fla
         if (!_dx12Device)
             LOG_DEBUG("D3D12CommandQueue captured");
 
+        ID3D12CommandQueue* realQueue = nullptr;
+        if (CheckForRealObject(__FUNCTION__, cq, (IUnknown**) &realQueue))
+            cq = realQueue;
+
         State::Instance().swapchainApi = DX12;
-        State::Instance().currentCommandQueue = cq;
+
+        if (State::Instance().currentCommandQueue == nullptr)
+            State::Instance().currentCommandQueue = cq;
 
         if (cq->GetDevice(IID_PPV_ARGS(&device12)) == S_OK)
         {
@@ -684,6 +690,12 @@ static HRESULT hkCreateSwapChainForCoreWindow(IDXGIFactory2* pFactory, IUnknown*
         pDesc->Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
     }
 
+    ID3D12CommandQueue* realQ = nullptr;
+    if (!CheckForRealObject(__FUNCTION__, pDevice, (IUnknown**) &realQ))
+        realQ = (ID3D12CommandQueue*) pDevice;
+
+    State::Instance().currentCommandQueue = realQ;
+
     State::Instance().skipDxgiLoadChecks = true;
     auto result = oCreateSwapChainForCoreWindow(pFactory, pDevice, pWindow, pDesc, pRestrictToOutput, ppSwapChain);
     State::Instance().skipDxgiLoadChecks = false;
@@ -848,11 +860,17 @@ static HRESULT hkCreateSwapChain(IDXGIFactory* pFactory, IUnknown* pDevice, DXGI
         Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
         State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
     }
-    else if (State::Instance().activeFgOutput == FGOutput::XeFG && !XeFGProxy::InitXeFG())
-    {
-        Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
-        State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
-    }
+    // else if (State::Instance().activeFgOutput == FGOutput::XeFG && !XeFGProxy::InitXeFG())
+    //{
+    //     Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
+    //     State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
+    // }
+
+    ID3D12CommandQueue* real = nullptr;
+    if (!CheckForRealObject(__FUNCTION__, pDevice, (IUnknown**) &real))
+        real = (ID3D12CommandQueue*) pDevice;
+
+    State::Instance().currentCommandQueue = real;
 
     ID3D12CommandQueue* cq = nullptr;
     if (Config::Instance()->OverlayMenu.value_or_default() &&
@@ -867,17 +885,13 @@ static HRESULT hkCreateSwapChain(IDXGIFactory* pFactory, IUnknown* pDevice, DXGI
         {
             if (State::Instance().activeFgOutput == FGOutput::FSRFG)
                 State::Instance().currentFG = new FSRFG_Dx12();
-            else if (State::Instance().activeFgOutput == FGOutput::XeFG)
-                State::Instance().currentFG = new XeFG_Dx12();
+            // else if (State::Instance().activeFgOutput == FGOutput::XeFG)
+            //     State::Instance().currentFG = new XeFG_Dx12();
         }
 
         HooksDx::ReleaseDx12SwapChain(pDesc->OutputWindow);
 
         auto fg = State::Instance().currentFG;
-
-        ID3D12CommandQueue* real = nullptr;
-        if (!CheckForRealObject(__FUNCTION__, pDevice, (IUnknown**) &real))
-            real = (ID3D12CommandQueue*) pDevice;
 
         _skipFGSwapChainCreation = true;
         State::Instance().skipDxgiLoadChecks = true;
@@ -1148,11 +1162,17 @@ static HRESULT hkCreateSwapChainForHwnd(IDXGIFactory* This, IUnknown* pDevice, H
         Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
         State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
     }
-    else if (State::Instance().activeFgOutput == FGOutput::XeFG && !XeFGProxy::InitXeFG())
-    {
-        Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
-        State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
-    }
+    // else if (State::Instance().activeFgOutput == FGOutput::XeFG && !XeFGProxy::InitXeFG())
+    //{
+    //     Config::Instance()->FGOutput.set_volatile_value(FGOutput::NoFG);
+    //     State::Instance().activeFgOutput = Config::Instance()->FGOutput.value_or_default();
+    // }
+
+    ID3D12CommandQueue* real = nullptr;
+    if (!CheckForRealObject(__FUNCTION__, pDevice, (IUnknown**) &real))
+        real = (ID3D12CommandQueue*) pDevice;
+
+    State::Instance().currentCommandQueue = real;
 
     ID3D12CommandQueue* cq = nullptr;
     if ((State::Instance().activeFgOutput == FGOutput::FSRFG || State::Instance().activeFgOutput == FGOutput::XeFG) &&
@@ -1166,17 +1186,13 @@ static HRESULT hkCreateSwapChainForHwnd(IDXGIFactory* This, IUnknown* pDevice, H
         {
             if (State::Instance().activeFgOutput == FGOutput::FSRFG)
                 State::Instance().currentFG = new FSRFG_Dx12();
-            else if (State::Instance().activeFgOutput == FGOutput::XeFG)
-                State::Instance().currentFG = new XeFG_Dx12();
+            // else if (State::Instance().activeFgOutput == FGOutput::XeFG)
+            //     State::Instance().currentFG = new XeFG_Dx12();
         }
 
         HooksDx::ReleaseDx12SwapChain(hWnd);
 
         auto fg = State::Instance().currentFG;
-
-        ID3D12CommandQueue* real = nullptr;
-        if (!CheckForRealObject(__FUNCTION__, pDevice, (IUnknown**) &real))
-            real = (ID3D12CommandQueue*) pDevice;
 
         _skipFGSwapChainCreation = true;
         State::Instance().skipDxgiLoadChecks = true;

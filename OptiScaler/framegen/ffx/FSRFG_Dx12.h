@@ -20,21 +20,14 @@ class FSRFG_Dx12 : public virtual IFGFeature_Dx12
     uint32_t _usingHudlessFormat = FFX_API_SURFACE_FORMAT_UNKNOWN;
 
     // One extra to copy things
-    ID3D12GraphicsCommandList* _fgCommandList {};
-    ID3D12CommandAllocator* _fgCommandAllocator {};
+    ID3D12GraphicsCommandList* _fgCommandList = nullptr;
+    ID3D12CommandAllocator* _fgCommandAllocator = nullptr;
+    ID3D12CommandQueue* _fgCommandQueue = nullptr;
+    ID3D12Fence* _fgFence = nullptr;
 
     std::map<FG_ResourceType, ID3D12Resource*> _resourceCopy[BUFFER_COUNT] {};
     std::map<FG_ResourceType, ID3D12CommandAllocator*> _copyCommandAllocator {};
     std::map<FG_ResourceType, ID3D12GraphicsCommandList*> _copyCommandList {};
-
-    bool CreateBufferResource(ID3D12Device* InDevice, ID3D12Resource* InSource, D3D12_RESOURCE_STATES InState,
-                              ID3D12Resource** OutResource, bool UAV = false, bool depth = false);
-    bool CreateBufferResourceWithSize(ID3D12Device* device, ID3D12Resource* source, D3D12_RESOURCE_STATES state,
-                                      ID3D12Resource** target, UINT width, UINT height, bool UAV, bool depth);
-    void ResourceBarrier(ID3D12GraphicsCommandList* InCommandList, ID3D12Resource* InResource,
-                         D3D12_RESOURCE_STATES InBeforeState, D3D12_RESOURCE_STATES InAfterState);
-    bool CopyResource(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* source, ID3D12Resource** target,
-                      D3D12_RESOURCE_STATES sourceState);
 
     static FfxApiResourceState GetFfxApiState(D3D12_RESOURCE_STATES state)
     {
@@ -94,7 +87,10 @@ class FSRFG_Dx12 : public virtual IFGFeature_Dx12
     bool ExecuteCommandList(ID3D12CommandQueue* queue) override final;
 
     void SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* resource,
-                     D3D12_RESOURCE_STATES state, FG_ResourceValidity validity);
+                     D3D12_RESOURCE_STATES state, FG_ResourceValidity validity) override final;
+
+    void SetResourceReady(FG_ResourceType type) override final;
+    void SetCommandQueue(FG_ResourceType type, ID3D12CommandQueue* queue) override final;
 
     // Methods
     void ConfigureFramePaceTuning();

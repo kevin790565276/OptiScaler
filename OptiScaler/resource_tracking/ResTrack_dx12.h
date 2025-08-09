@@ -3,8 +3,11 @@
 #include <pch.h>
 
 #include <hudfix/Hudfix_Dx12.h>
+#include <framegen/IFGFeature_Dx12.h>
 
 #include <ankerl/unordered_dense.h>
+
+#include <map>
 
 // Test resources if they are valid or not
 // #define DEBUG_TRACKING
@@ -237,8 +240,8 @@ class ResTrack_Dx12
     inline static bool _presentDone = true;
     inline static std::mutex _drawMutex;
 
-    inline static ID3D12GraphicsCommandList* _hudlessCommandList[BUFFER_COUNT] {};
-    inline static ID3D12GraphicsCommandList* _inputsCommandList[BUFFER_COUNT] {};
+    inline static std::mutex _resourceCommandListMutex;
+    inline static std::map<FG_ResourceType, ID3D12GraphicsCommandList*> _resourceCommandList[BUFFER_COUNT];
 
     inline static ULONG64 _lastHudlessFrame = 0;
     inline static std::mutex _hudlessMutex;
@@ -276,7 +279,7 @@ class ResTrack_Dx12
 
     static void hkExecuteBundle(ID3D12GraphicsCommandList* This, ID3D12GraphicsCommandList* pCommandList);
 
-    static void hkClose(ID3D12GraphicsCommandList* This);
+    static HRESULT hkClose(ID3D12GraphicsCommandList* This);
 
     static void hkCreateRenderTargetView(ID3D12Device* This, ID3D12Resource* pResource,
                                          D3D12_RENDER_TARGET_VIEW_DESC* pDesc,
@@ -326,7 +329,5 @@ class ResTrack_Dx12
   public:
     static void HookDevice(ID3D12Device* device);
     static void ClearPossibleHudless();
-    static void SetInputsCmdList(ID3D12GraphicsCommandList* cmdList);
-    static void SetHudlessCmdList(ID3D12GraphicsCommandList* cmdList);
-    static void ExecuteWaitingCommandLists();
+    static void SetResourceCmdList(FG_ResourceType type, ID3D12GraphicsCommandList* cmdList);
 };

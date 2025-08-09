@@ -12,7 +12,6 @@ UINT64 IFGFeature::StartNewFrame()
     auto fIndex = GetIndex();
 
     _resourceReady[fIndex].clear();
-
     _waitingExecute[fIndex] = false;
 
     _noUi[fIndex] = true;
@@ -24,8 +23,7 @@ UINT64 IFGFeature::StartNewFrame()
     return _frameCount;
 }
 
-void IFGFeature::SetResourceReady(FG_ResourceType type) { _resourceReady[GetIndex()][type] = true; }
-bool IFGFeature::IsResourceReady(FG_ResourceType type) { return _resourceReady->contains(type); }
+bool IFGFeature::IsResourceReady(FG_ResourceType type) { return _resourceReady[GetIndex()].contains(type); }
 
 bool IFGFeature::WaitingExecution() { return _waitingExecute[GetIndex()]; }
 void IFGFeature::SetExecuted() { _waitingExecute[GetIndex()] = false; }

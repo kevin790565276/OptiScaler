@@ -360,6 +360,7 @@ static void RenderImGui_DX12(IDXGISwapChain* pSwapChainPlain)
                 MenuOverlayBase::HideMenu();
                 CleanupRenderTargetDx12(true);
                 pSwapChain->Release();
+                State::Instance().skipHeapCapture = false;
                 return;
             }
 
@@ -626,11 +627,15 @@ void MenuOverlayDx::Present(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT 
         }
     }
 
+    State::Instance().skipHeapCapture = true;
+
     // Render menu
     if (_dx11Device)
         RenderImGui_DX11(pSwapChain);
     else if (_dx12Device)
         RenderImGui_DX12(pSwapChain);
+
+    State::Instance().skipHeapCapture = false;
 
     // release used objects
     if (cq != nullptr)

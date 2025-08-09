@@ -161,12 +161,14 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         hudlessSent = true;
 
-        ResTrack_Dx12::SetHudlessCmdList(cmdBuffer);
+        // ResTrack_Dx12::SetHudlessCmdList(cmdBuffer);
 
         auto hudlessResource = (ID3D12Resource*) tag.resource->native;
 
-        const auto copy = alwaysCopy ? true : tag.lifecycle == sl::eOnlyValidNow;
-        fgOutput->SetHudless(cmdBuffer, hudlessResource, (D3D12_RESOURCE_STATES) tag.resource->state, copy);
+        const auto validity =
+            (tag.lifecycle == sl::eOnlyValidNow) ? FG_ResourceValidity::ValidNow : FG_ResourceValidity::UntilPresent;
+        fgOutput->SetResource(FG_ResourceType::HudlessColor, cmdBuffer, hudlessResource,
+                              (D3D12_RESOURCE_STATES) tag.resource->state, validity);
 
         auto static lastFormat = DXGI_FORMAT_UNKNOWN;
         auto format = hudlessResource->GetDesc().Format;
@@ -188,15 +190,12 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         depthSent = true;
 
-        ResTrack_Dx12::SetInputsCmdList(cmdBuffer);
-        // ResTrack_Dx12::SetDepthCmdList(cmdBuffer);
-
         auto depthResource = (ID3D12Resource*) tag.resource->native;
 
-        const auto copy = alwaysCopy ? true : tag.lifecycle == sl::eOnlyValidNow;
-        Config::Instance()->FGMakeDepthCopy.set_volatile_value(copy);
-
-        fgOutput->SetDepth(cmdBuffer, depthResource, (D3D12_RESOURCE_STATES) tag.resource->state);
+        const auto validity =
+            (tag.lifecycle == sl::eOnlyValidNow) ? FG_ResourceValidity::ValidNow : FG_ResourceValidity::UntilPresent;
+        fgOutput->SetResource(FG_ResourceType::Depth, cmdBuffer, depthResource,
+                              (D3D12_RESOURCE_STATES) tag.resource->state, validity);
     }
     else if (tag.type == sl::kBufferTypeMotionVectors)
     {
@@ -208,10 +207,10 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         auto mvResource = (ID3D12Resource*) tag.resource->native;
 
-        const auto copy = alwaysCopy ? true : tag.lifecycle == sl::eOnlyValidNow;
-        Config::Instance()->FGMakeMVCopy.set_volatile_value(copy);
-
-        fgOutput->SetVelocity(cmdBuffer, mvResource, (D3D12_RESOURCE_STATES) tag.resource->state);
+        const auto validity =
+            (tag.lifecycle == sl::eOnlyValidNow) ? FG_ResourceValidity::ValidNow : FG_ResourceValidity::UntilPresent;
+        fgOutput->SetResource(FG_ResourceType::Velocity, cmdBuffer, mvResource,
+                              (D3D12_RESOURCE_STATES) tag.resource->state, validity);
     }
     else if (tag.type == sl::kBufferTypeUIColorAndAlpha)
     {
@@ -225,8 +224,10 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
             auto uiResource = (ID3D12Resource*) tag.resource->native;
 
-            const auto copy = alwaysCopy ? true : tag.lifecycle == sl::eOnlyValidNow;
-            fgOutput->SetUI(cmdBuffer, uiResource, (D3D12_RESOURCE_STATES) tag.resource->state, copy);
+            const auto validity = (tag.lifecycle == sl::eOnlyValidNow) ? FG_ResourceValidity::ValidNow
+                                                                       : FG_ResourceValidity::UntilPresent;
+            fgOutput->SetResource(FG_ResourceType::UIColor, cmdBuffer, uiResource,
+                                  (D3D12_RESOURCE_STATES) tag.resource->state, validity);
         }
     }
     else if (tag.type == sl::kBufferTypeBidirectionalDistortionField)
@@ -239,9 +240,10 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         auto distortionFieldResource = (ID3D12Resource*) tag.resource->native;
 
-        const auto copy = alwaysCopy ? true : tag.lifecycle == sl::eOnlyValidNow;
-        fgOutput->SetDistortionField(cmdBuffer, distortionFieldResource, (D3D12_RESOURCE_STATES) tag.resource->state,
-                                     copy);
+        const auto validity =
+            (tag.lifecycle == sl::eOnlyValidNow) ? FG_ResourceValidity::ValidNow : FG_ResourceValidity::UntilPresent;
+        fgOutput->SetResource(FG_ResourceType::Distortion, cmdBuffer, distortionFieldResource,
+                              (D3D12_RESOURCE_STATES) tag.resource->state, validity);
     }
 
     if (readyForDispatch())

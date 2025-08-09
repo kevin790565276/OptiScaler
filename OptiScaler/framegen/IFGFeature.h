@@ -26,7 +26,7 @@ struct FG_Constants
     // uint32_t maxRenderHeight;
 };
 
-typedef enum FG_ResourceType
+typedef enum FG_ResourceType : uint32_t
 {
     Depth = 0,
     Velocity,
@@ -35,10 +35,11 @@ typedef enum FG_ResourceType
     Distortion
 };
 
-typedef enum FG_ResourceValidity
+typedef enum FG_ResourceValidity : uint32_t
 {
     ValidNow = 0,
-    UntilPresent
+    UntilPresent,
+    JustTrackCmdlist
 };
 
 class IFGFeature
@@ -92,7 +93,7 @@ class IFGFeature
     int GetIndex();
     UINT64 StartNewFrame();
 
-    void SetResourceReady(FG_ResourceType type);
+    virtual void SetResourceReady(FG_ResourceType type) = 0;
     bool IsResourceReady(FG_ResourceType type);
 
     bool IsUsingUI();

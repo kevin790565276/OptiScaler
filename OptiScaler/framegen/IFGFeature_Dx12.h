@@ -12,12 +12,15 @@
 
 typedef struct Dx12Resource
 {
-    FG_ResourceType type = FG_ResourceType::Undefined;
+    FG_ResourceType type;
     ID3D12Resource* resource = nullptr;
     ID3D12Resource* copy = nullptr;
     ID3D12CommandList* cmdList = nullptr;
     D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COMMON;
     FG_ResourceValidity validity = FG_ResourceValidity::ValidNow;
+    UINT64 fenceValue = 0;
+
+    ID3D12Resource* GetResource() { return (copy == nullptr) ? resource : copy; }
 };
 
 class IFGFeature_Dx12 : public virtual IFGFeature
@@ -33,6 +36,15 @@ class IFGFeature_Dx12 : public virtual IFGFeature
 
     std::unique_ptr<RF_Dx12> _mvFlip;
     std::unique_ptr<RF_Dx12> _depthFlip;
+
+    bool CreateBufferResource(ID3D12Device* InDevice, ID3D12Resource* InSource, D3D12_RESOURCE_STATES InState,
+                              ID3D12Resource** OutResource, bool UAV = false, bool depth = false);
+    bool CreateBufferResourceWithSize(ID3D12Device* device, ID3D12Resource* source, D3D12_RESOURCE_STATES state,
+                                      ID3D12Resource** target, UINT width, UINT height, bool UAV, bool depth);
+    void ResourceBarrier(ID3D12GraphicsCommandList* InCommandList, ID3D12Resource* InResource,
+                         D3D12_RESOURCE_STATES InBeforeState, D3D12_RESOURCE_STATES InAfterState);
+    bool CopyResource(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* source, ID3D12Resource** target,
+                      D3D12_RESOURCE_STATES sourceState);
 
     void NewFrame() override final;
 
@@ -54,11 +66,15 @@ class IFGFeature_Dx12 : public virtual IFGFeature
     virtual void CreateObjects(ID3D12Device* InDevice) = 0;
 
     Dx12Resource* GetResource(FG_ResourceType type);
+    void GetResourceCopy(FG_ResourceType type, D3D12_RESOURCE_STATES bufferState, ID3D12Resource** output);
+
     virtual void SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* resource,
                              D3D12_RESOURCE_STATES state, FG_ResourceValidity validity) = 0;
 
     virtual bool ExecuteCommandList(ID3D12CommandQueue* queue) = 0;
     virtual ID3D12CommandList* GetCommandList() = 0;
+
+    virtual void SetCommandQueue(FG_ResourceType type, ID3D12CommandQueue* queue) = 0;
 
     IFGFeature_Dx12() = default;
 };

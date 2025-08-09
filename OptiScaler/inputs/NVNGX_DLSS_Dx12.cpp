@@ -505,7 +505,7 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D12_Shutdown(void)
 
     if (State::Instance().currentFG != nullptr && State::Instance().activeFgInput == FGInput::Upscaler)
     {
-        State::Instance().currentFG->StopAndDestroyContext(true, true, false);
+        State::Instance().currentFG->StopAndDestroyContext(true, true);
         State::Instance().ClearCapturedHudlesses = true;
     }
 
@@ -935,7 +935,7 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D12_ReleaseFeature(NVSDK_NGX_Handle* 
     State::Instance().FGchanged = true;
     if (State::Instance().currentFG != nullptr && State::Instance().activeFgInput == FGInput::Upscaler)
     {
-        State::Instance().currentFG->StopAndDestroyContext(true, false, false);
+        State::Instance().currentFG->StopAndDestroyContext(true, false);
         State::Instance().ClearCapturedHudlesses = true;
         Hudfix_Dx12::ResetCounters();
     }
@@ -1281,7 +1281,7 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D12_EvaluateFeature(ID3D12GraphicsCom
             if (State::Instance().currentFG != nullptr && State::Instance().currentFG->IsActive() &&
                 State::Instance().activeFgInput == FGInput::Upscaler)
             {
-                State::Instance().currentFG->StopAndDestroyContext(false, false, false);
+                State::Instance().currentFG->StopAndDestroyContext(false, false);
                 Hudfix_Dx12::ResetCounters();
                 State::Instance().FGchanged = true;
                 State::Instance().ClearCapturedHudlesses = true;
@@ -1604,28 +1604,11 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D12_EvaluateFeature(ID3D12GraphicsCom
             fg->Mutex.unlockThis(4);
         }
 
-        ResTrack_Dx12::SetInputsCmdList(InCmdList);
-        // ResTrack_Dx12::SetDepthCmdList(InCmdList);
-        //  ResTrack_Dx12::SetMVsCmdList(InCmdList);
         bool allocatorReset = false;
         frameIndex = fg->GetIndex();
 
-#ifdef USE_QUEUE_FOR_FG
-        auto allocator = FrameGen_Dx12::fgCommandAllocators[frameIndex];
-        auto result = allocator->Reset();
-        result = FrameGen_Dx12::fgCommandList[frameIndex]->Reset(allocator, nullptr);
-        allocatorReset = true;
-#endif
         ID3D12GraphicsCommandList* commandList = nullptr;
-
-#ifdef USE_COPY_QUEUE_FOR_FG
-        FrameGen_Dx12::fgCopyCommandQueue->Wait(FrameGen_Dx12::fgCopyFence, frameIndex);
-        FrameGen_Dx12::fgCopyCommandAllocator[frameIndex]->Reset();
-        FrameGen_Dx12::fgCopyCommandList[frameIndex]->Reset(FrameGen_Dx12::fgCopyCommandAllocator[frameIndex], nullptr);
-        commandList = FrameGen_Dx12::fgCopyCommandList[frameIndex];
-#else
         commandList = InCmdList;
-#endif
 
         LOG_DEBUG("(FG) copy buffers for fgUpscaledImage[{}], frame: {}", frameIndex, fg->FrameCount());
 
@@ -1634,9 +1617,10 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D12_EvaluateFeature(ID3D12GraphicsCom
             InParameters->Get(NVSDK_NGX_Parameter_MotionVectors, (void**) &paramVelocity);
 
         if (paramVelocity != nullptr)
-            fg->SetVelocity(commandList, paramVelocity,
+            fg->SetResource(FG_ResourceType::Velocity, commandList, paramVelocity,
                             (D3D12_RESOURCE_STATES) Config::Instance()->MVResourceBarrier.value_or(
-                                D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+                                D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE),
+                            FG_ResourceValidity::ValidNow);
 
         ID3D12Resource* paramDepth = nullptr;
         if (InParameters->Get(NVSDK_NGX_Parameter_Depth, &paramDepth) != NVSDK_NGX_Result_Success)
@@ -1661,16 +1645,19 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D12_EvaluateFeature(ID3D12GraphicsCom
                     if (DepthScale->Dispatch(D3D12Device, InCmdList, paramDepth, DepthScale->Buffer()))
                     {
                         DepthScale->SetBufferState(InCmdList, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-                        fg->SetDepth(commandList, DepthScale->Buffer(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+                        fg->SetResource(FG_ResourceType::Depth, commandList, DepthScale->Buffer(),
+                                        D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+                                        FG_ResourceValidity::UntilPresent);
                         done = true;
                     }
                 }
             }
 
             if (!done)
-                fg->SetDepth(commandList, paramDepth,
-                             (D3D12_RESOURCE_STATES) Config::Instance()->DepthResourceBarrier.value_or(
-                                 D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+                fg->SetResource(FG_ResourceType::Depth, commandList, paramDepth,
+                                (D3D12_RESOURCE_STATES) Config::Instance()->DepthResourceBarrier.value_or(
+                                    D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE),
+                                FG_ResourceValidity::ValidNow);
         }
 
 #ifdef USE_COPY_QUEUE_FOR_FG
@@ -1728,19 +1715,14 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D12_EvaluateFeature(ID3D12GraphicsCom
                 info.flags = desc.Flags;
                 info.type = UAV;
 
-                if (Hudfix_Dx12::CheckForHudless(
-                        __FUNCTION__, InCmdList, &info,
-                        (D3D12_RESOURCE_STATES) Config::Instance()->OutputResourceBarrier.value_or(
-                            D3D12_RESOURCE_STATE_UNORDERED_ACCESS),
-                        true))
-                {
-                    ResTrack_Dx12::SetHudlessCmdList(InCmdList);
-                }
+                Hudfix_Dx12::CheckForHudless(__FUNCTION__, InCmdList, &info,
+                                             (D3D12_RESOURCE_STATES) Config::Instance()->OutputResourceBarrier.value_or(
+                                                 D3D12_RESOURCE_STATE_UNORDERED_ACCESS),
+                                             true);
             }
             else
             {
                 LOG_DEBUG("(FG) running, frame: {0}", deviceContext->feature->FrameCount());
-                fg->Dispatch();
             }
         }
     }
