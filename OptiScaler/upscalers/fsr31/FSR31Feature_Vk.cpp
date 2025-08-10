@@ -397,41 +397,63 @@ bool FSR31FeatureVk::Evaluate(VkCommandBuffer InCmdBuffer, NVSDK_NGX_Parameter* 
         }
     }
 
+    void* paramTransparency = nullptr;
+    InParameters->Get("FSR.transparencyAndComposition", &paramTransparency);
+
     void* paramReactiveMask = nullptr;
-    if (InParameters->Get(NVSDK_NGX_Parameter_DLSS_Input_Bias_Current_Color_Mask, &paramReactiveMask) !=
-        NVSDK_NGX_Result_Success)
-        InParameters->Get(NVSDK_NGX_Parameter_DLSS_Input_Bias_Current_Color_Mask, (void**) &paramReactiveMask);
+    InParameters->Get("FSR.reactive", &paramReactiveMask);
 
-    if (paramReactiveMask && Config::Instance()->FsrUseMaskForTransparency.value_or_default())
+    void* paramReactiveMask2 = nullptr;
+    InParameters->Get(NVSDK_NGX_Parameter_DLSS_Input_Bias_Current_Color_Mask, &paramReactiveMask2);
+
+    if (!Config::Instance()->DisableReactiveMask.value_or(paramReactiveMask == nullptr &&
+                                                          paramReactiveMask2 == nullptr))
     {
-        params.transparencyAndComposition =
-            ffxApiGetResourceVK(((NVSDK_NGX_Resource_VK*) paramReactiveMask)->Resource.ImageViewInfo.Image,
-                                ffxApiGetImageResourceDescriptionVKLocal((NVSDK_NGX_Resource_VK*) paramReactiveMask),
-                                FFX_API_RESOURCE_STATE_COMPUTE_READ);
-    }
-
-    if (!Config::Instance()->DisableReactiveMask.value_or(paramReactiveMask == nullptr))
-    {
-        InParameters->Get(NVSDK_NGX_Parameter_DLSS_Input_Bias_Current_Color_Mask, &paramReactiveMask);
-
-        if (paramReactiveMask)
+        if (paramTransparency != nullptr)
         {
-            LOG_DEBUG("Bias mask exist..");
+            LOG_DEBUG("Using FSR transparency mask..");
+            params.transparencyAndComposition = ffxApiGetResourceVK(
+                ((NVSDK_NGX_Resource_VK*) paramTransparency)->Resource.ImageViewInfo.Image,
+                ffxApiGetImageResourceDescriptionVKLocal((NVSDK_NGX_Resource_VK*) paramTransparency),
+                FFX_API_RESOURCE_STATE_COMPUTE_READ);
+        }
 
-            if (Config::Instance()->DlssReactiveMaskBias.value_or_default() > 0.0f)
-            {
-                params.reactive = ffxApiGetResourceVK(
-                    ((NVSDK_NGX_Resource_VK*) paramReactiveMask)->Resource.ImageViewInfo.Image,
-                    ffxApiGetImageResourceDescriptionVKLocal((NVSDK_NGX_Resource_VK*) paramReactiveMask),
-                    FFX_API_RESOURCE_STATE_COMPUTE_READ);
-            }
+        if (paramReactiveMask != nullptr)
+        {
+            LOG_DEBUG("Using FSR reactive mask..");
+            params.reactive = ffxApiGetResourceVK(
+                ((NVSDK_NGX_Resource_VK*) paramReactiveMask)->Resource.ImageViewInfo.Image,
+                ffxApiGetImageResourceDescriptionVKLocal((NVSDK_NGX_Resource_VK*) paramReactiveMask),
+                FFX_API_RESOURCE_STATE_COMPUTE_READ);
         }
         else
         {
-            LOG_DEBUG("Bias mask not exist and its enabled in config, it may cause problems!!");
-            Config::Instance()->DisableReactiveMask.set_volatile_value(true);
-            State::Instance().changeBackend[Handle()->Id] = true;
-            return true;
+            if (paramReactiveMask2 != nullptr)
+            {
+                if (Config::Instance()->FsrUseMaskForTransparency.value_or_default())
+                {
+                    params.transparencyAndComposition = ffxApiGetResourceVK(
+                        ((NVSDK_NGX_Resource_VK*) paramReactiveMask2)->Resource.ImageViewInfo.Image,
+                        ffxApiGetImageResourceDescriptionVKLocal((NVSDK_NGX_Resource_VK*) paramReactiveMask2),
+                        FFX_API_RESOURCE_STATE_COMPUTE_READ);
+                }
+
+                LOG_DEBUG("Bias mask exist..");
+
+                if (Config::Instance()->DlssReactiveMaskBias.value_or_default() > 0.0f)
+                {
+                    params.reactive = ffxApiGetResourceVK(
+                        ((NVSDK_NGX_Resource_VK*) paramReactiveMask2)->Resource.ImageViewInfo.Image,
+                        ffxApiGetImageResourceDescriptionVKLocal((NVSDK_NGX_Resource_VK*) paramReactiveMask2),
+                        FFX_API_RESOURCE_STATE_COMPUTE_READ);
+                }
+            }
+            else
+            {
+                LOG_DEBUG("Bias mask not exist and its enabled in config, it may cause problems!!");
+                Config::Instance()->DisableReactiveMask.set_volatile_value(true);
+                return true;
+            }
         }
     }
 
@@ -440,7 +462,7 @@ bool FSR31FeatureVk::Evaluate(VkCommandBuffer InCmdBuffer, NVSDK_NGX_Parameter* 
     _hasMV = params.motionVectors.resource != nullptr;
     _hasExposure = params.exposure.resource != nullptr;
     _hasTM = params.transparencyAndComposition.resource != nullptr;
-    _accessToReactiveMask = paramReactiveMask != nullptr;
+    _accessToReactiveMask = paramReactiveMask != nullptr || paramReactiveMask2 != nullptr;
     _hasOutput = params.output.resource != nullptr;
 
     float MVScaleX = 1.0f;

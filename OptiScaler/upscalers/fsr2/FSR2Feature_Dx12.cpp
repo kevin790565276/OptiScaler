@@ -240,17 +240,13 @@ bool FSR2FeatureDx12::Evaluate(ID3D12GraphicsCommandList* InCommandList, NVSDK_N
     }
 
     ID3D12Resource* paramTransparency = nullptr;
-    if (InParameters->Get("FSR.transparencyAndComposition", &paramTransparency) == NVSDK_NGX_Result_Success)
-        InParameters->Get("FSR.transparencyAndComposition", (void**) &paramTransparency);
+    InParameters->Get("FSR.transparencyAndComposition", (void**) &paramTransparency);
 
     ID3D12Resource* paramReactiveMask = nullptr;
-    if (InParameters->Get("FSR.reactive", &paramReactiveMask) == NVSDK_NGX_Result_Success)
-        InParameters->Get("FSR.reactive", (void**) &paramReactiveMask);
+    InParameters->Get("FSR.reactive", (void**) &paramReactiveMask);
 
     ID3D12Resource* paramReactiveMask2 = nullptr;
-    if (InParameters->Get(NVSDK_NGX_Parameter_DLSS_Input_Bias_Current_Color_Mask, &paramReactiveMask2) !=
-        NVSDK_NGX_Result_Success)
-        InParameters->Get(NVSDK_NGX_Parameter_DLSS_Input_Bias_Current_Color_Mask, (void**) &paramReactiveMask2);
+    InParameters->Get(NVSDK_NGX_Parameter_DLSS_Input_Bias_Current_Color_Mask, (void**) &paramReactiveMask2);
 
     if (!Config::Instance()->DisableReactiveMask.value_or(paramReactiveMask == nullptr &&
                                                           paramReactiveMask2 == nullptr))
