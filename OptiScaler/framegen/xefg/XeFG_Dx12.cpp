@@ -419,13 +419,6 @@ void XeFG_Dx12::CreateContext(ID3D12Device* device, FG_Constants& fgConstants)
     {
         _fgContext = _swapChainContext;
     }
-
-    if (!_isActive)
-    {
-        auto result = XeFGProxy::SetEnabled()(_swapChainContext, true);
-        _isActive = true;
-        LOG_INFO("SetEnabled: true, result: {} ({})", magic_enum::enum_name(result), (UINT) result);
-    }
 }
 
 bool XeFG_Dx12::Dispatch()
@@ -570,7 +563,7 @@ void XeFG_Dx12::EvaluateState(ID3D12Device* device, FG_Constants& fgConstants)
     }
 
     if (!State::Instance().FGchanged && Config::Instance()->FGEnabled.value_or_default() && !IsPaused() &&
-        XeFGProxy::InitXeFG() && !IsActive() && HooksDx::CurrentSwapchainFormat() != DXGI_FORMAT_UNKNOWN)
+        XeFGProxy::InitXeFG() && _fgContext == nullptr && HooksDx::CurrentSwapchainFormat() != DXGI_FORMAT_UNKNOWN)
     {
         CreateObjects(device);
         CreateContext(device, fgConstants);
@@ -606,7 +599,7 @@ void XeFG_Dx12::EvaluateState(ID3D12Device* device, FG_Constants& fgConstants)
 
     State::Instance().SCchanged = false;
 
-    if (!IsPaused() && !_isActive)
+    if (_fgContext != nullptr && !IsPaused() && !_isActive)
     {
         auto result = XeFGProxy::SetEnabled()(_swapChainContext, true);
         _isActive = true;
