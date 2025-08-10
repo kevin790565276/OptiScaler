@@ -21,6 +21,11 @@ bool Sl_Inputs_Dx12::setConstants(const sl::Constants& values, uint32_t frameId)
 
     LOG_DEBUG("Setting consts for streamline index: {}", index);
 
+    // Streamline logs already log this
+    static uint32_t lastFrameId = UINT32_MAX;
+    setConstantsSameFrameId = lastFrameId == frameId;
+    lastFrameId = frameId;
+
     data = sl::Constants {};
 
     if (data.has_value())
@@ -142,7 +147,8 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
         return true;
     }
 
-    if (dispatched)
+    // TODO: detect if there are multiple calls to hkslSetConstants with the same ID, DRG crashing, sl sees an error
+    if (dispatched && !setConstantsSameFrameId)
     {
         fgOutput->StartNewFrame();
 
@@ -165,8 +171,13 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         auto hudlessResource = (ID3D12Resource*) tag.resource->native;
 
-        const auto validity =
+        auto validity =
             (tag.lifecycle != sl::eOnlyValidNow) ? FG_ResourceValidity::UntilPresent : FG_ResourceValidity::ValidNow;
+
+        // We need to make sure we have a copy of hudless that WE can use
+        if (cmdBuffer != nullptr && validity == FG_ResourceValidity::ValidNow)
+            validity = FG_ResourceValidity::ValidButMakeCopy;
+
         fgOutput->SetResource(FG_ResourceType::HudlessColor, cmdBuffer, hudlessResource, tag.extent.width,
                               tag.extent.height, (D3D12_RESOURCE_STATES) tag.resource->state, validity);
 
@@ -249,13 +260,10 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
                               tag.extent.height, (D3D12_RESOURCE_STATES) tag.resource->state, validity);
     }
 
-    if (readyForDispatch())
-        dispatchFG(nullptr);
-
     return true;
 }
 
-bool Sl_Inputs_Dx12::dispatchFG(ID3D12GraphicsCommandList* cmdBuffer)
+bool Sl_Inputs_Dx12::dispatchFG()
 {
     dispatched = true;
 

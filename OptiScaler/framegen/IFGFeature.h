@@ -39,6 +39,7 @@ typedef enum FG_ResourceValidity : uint32_t
 {
     ValidNow = 0,
     UntilPresent,
+    ValidButMakeCopy,
     JustTrackCmdlist
 };
 

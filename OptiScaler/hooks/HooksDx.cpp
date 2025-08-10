@@ -258,6 +258,9 @@ static HRESULT hkFGPresent(void* This, UINT SyncInterval, UINT Flags)
         }
     }
 
+    if (State::Instance().slFGInputs.readyForDispatch())
+        State::Instance().slFGInputs.dispatchFG();
+
     bool mutexUsed = false;
     if (willPresent && fg != nullptr && fg->IsActive() &&
         Config::Instance()->FGUseMutexForSwapchain.value_or_default() && fg->Mutex.getOwner() != 2)
@@ -287,14 +290,18 @@ static HRESULT hkFGPresent(void* This, UINT SyncInterval, UINT Flags)
         Hudfix_Dx12::PresentStart();
     }
 
-    // if (willPresent && fg != nullptr && fg->IsUsingUI())
-    //{
-    //     ID3D12Resource* backBuffer = nullptr;
-    //     auto swapchain = ((IDXGISwapChain3*) This);
-    //     auto swapchainIndex = swapchain->GetCurrentBackBufferIndex();
-    //     swapchain->GetBuffer(swapchainIndex, IID_PPV_ARGS(&backBuffer));
-    //     fg->GetHudless(backBuffer, D3D12_RESOURCE_STATE_PRESENT);
-    // }
+    if (willPresent && fg != nullptr && fg->IsUsingUI())
+    {
+        ID3D12Resource* backBuffer = nullptr;
+        auto swapchain = ((IDXGISwapChain3*) This);
+        auto swapchainIndex = swapchain->GetCurrentBackBufferIndex();
+        swapchain->GetBuffer(swapchainIndex, IID_PPV_ARGS(&backBuffer));
+
+        auto result = fg->GetResourceCopy(FG_ResourceType::HudlessColor, D3D12_RESOURCE_STATE_PRESENT, backBuffer);
+
+        if (!result)
+            LOG_WARN("Couldn't copy hudless into the backbuffer");
+    }
 
     HRESULT result;
     result = o_FGSCPresent(This, SyncInterval, Flags);
