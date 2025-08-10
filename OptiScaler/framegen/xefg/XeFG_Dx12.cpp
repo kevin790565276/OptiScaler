@@ -449,48 +449,48 @@ bool XeFG_Dx12::Dispatch()
     uint32_t height = _height;
 
     // use swapchain buffer info
-    DXGI_SWAP_CHAIN_DESC scDesc1 {};
-    if (State::Instance().currentSwapchain->GetDesc(&scDesc1) == S_OK)
-    {
-        LOG_DEBUG("SwapChain Res: {}x{}, Upscaler Display Res: {}x{}", scDesc1.BufferDesc.Width,
-                  scDesc1.BufferDesc.Height, _interpolationWidth, _interpolationHeight);
+    // DXGI_SWAP_CHAIN_DESC scDesc1 {};
+    // if (State::Instance().currentSwapchain->GetDesc(&scDesc1) == S_OK)
+    //{
+    //    LOG_DEBUG("SwapChain Res: {}x{}, Upscaler Display Res: {}x{}", scDesc1.BufferDesc.Width,
+    //              scDesc1.BufferDesc.Height, _interpolationWidth, _interpolationHeight);
 
-        auto calculatedLeft = ((int) scDesc1.BufferDesc.Width - (int) _interpolationWidth) / 2;
-        if (calculatedLeft > 0)
-            left = Config::Instance()->FGRectLeft.value_or(calculatedLeft);
+    //    auto calculatedLeft = ((int) scDesc1.BufferDesc.Width - (int) _interpolationWidth) / 2;
+    //    if (calculatedLeft > 0)
+    //        left = Config::Instance()->FGRectLeft.value_or(calculatedLeft);
 
-        auto calculatedTop = ((int) scDesc1.BufferDesc.Height - (int) _interpolationHeight) / 2;
-        if (calculatedTop > 0)
-            top = Config::Instance()->FGRectTop.value_or(calculatedTop);
+    //    auto calculatedTop = ((int) scDesc1.BufferDesc.Height - (int) _interpolationHeight) / 2;
+    //    if (calculatedTop > 0)
+    //        top = Config::Instance()->FGRectTop.value_or(calculatedTop);
 
-        width = Config::Instance()->FGRectWidth.value_or(_interpolationWidth);
-        height = Config::Instance()->FGRectHeight.value_or(_interpolationHeight);
-    }
-    else
-    {
-        left = Config::Instance()->FGRectLeft.value_or(0);
-        top = Config::Instance()->FGRectTop.value_or(0);
-        width = Config::Instance()->FGRectWidth.value_or(_width);
-        height = Config::Instance()->FGRectHeight.value_or(_height);
-    }
+    //    width = Config::Instance()->FGRectWidth.value_or(_interpolationWidth);
+    //    height = Config::Instance()->FGRectHeight.value_or(_interpolationHeight);
+    //}
+    // else
+    //{
+    //    left = Config::Instance()->FGRectLeft.value_or(0);
+    //    top = Config::Instance()->FGRectTop.value_or(0);
+    //    width = Config::Instance()->FGRectWidth.value_or(_width);
+    //    height = Config::Instance()->FGRectHeight.value_or(_height);
+    //}
 
-    uint32_t renderWidth = width;
-    uint32_t renderHeight = height;
+    // uint32_t renderWidth = width;
+    // uint32_t renderHeight = height;
 
-    LOG_DEBUG("Output Base: {}:{}, Size: {}x{}", left, top, width, height);
+    // LOG_DEBUG("Output Base: {}:{}, Size: {}x{}", left, top, width, height);
 
-    xefg_swapchain_d3d12_resource_data_t backbuffer = {};
-    backbuffer.type = XEFG_SWAPCHAIN_RES_BACKBUFFER;
-    backbuffer.resourceBase = { left, top };
-    backbuffer.resourceSize = { width, height };
+    // xefg_swapchain_d3d12_resource_data_t backbuffer = {};
+    // backbuffer.type = XEFG_SWAPCHAIN_RES_BACKBUFFER;
+    // backbuffer.validity = XEFG_SWAPCHAIN_RV_UNTIL_NEXT_PRESENT;
+    // backbuffer.resourceBase = { left, top };
+    // backbuffer.resourceSize = { width, height };
 
-    auto result = XeFGProxy::D3D12TagFrameResource()(_swapChainContext, _copyCommandList[FG_ResourceType::Distortion],
-                                                     _frameCount, &backbuffer);
-    if (result != XEFG_SWAPCHAIN_RESULT_SUCCESS)
-    {
-        LOG_ERROR("D3D12TagFrameResource Backbuffer error: {} ({})", magic_enum::enum_name(result), (UINT) result);
-        return false;
-    }
+    // auto result = XeFGProxy::D3D12TagFrameResource()(_swapChainContext, nullptr, _frameCount, &backbuffer);
+    // if (result != XEFG_SWAPCHAIN_RESULT_SUCCESS)
+    //{
+    //     LOG_ERROR("D3D12TagFrameResource Backbuffer error: {} ({})", magic_enum::enum_name(result), (UINT) result);
+    //     return false;
+    // }
 
     xefg_swapchain_frame_constant_data_t constData = {};
 
@@ -530,7 +530,7 @@ bool XeFG_Dx12::Dispatch()
 
     LOG_DEBUG("Reset: {}, FTDelta: {}", _reset, _ftDelta);
 
-    result = XeFGProxy::TagFrameConstants()(_swapChainContext, _frameCount, &constData);
+    auto result = XeFGProxy::TagFrameConstants()(_swapChainContext, _frameCount, &constData);
     if (result != XEFG_SWAPCHAIN_RESULT_SUCCESS)
     {
         LOG_ERROR("TagFrameConstants error: {} ({})", magic_enum::enum_name(result), (UINT) result);
@@ -605,87 +605,22 @@ void XeFG_Dx12::EvaluateState(ID3D12Device* device, FG_Constants& fgConstants)
     }
 
     State::Instance().SCchanged = false;
+
+    if (!IsPaused() && !_isActive)
+    {
+        auto result = XeFGProxy::SetEnabled()(_swapChainContext, true);
+        _isActive = true;
+        LOG_INFO("SetEnabled: true, result: {} ({})", magic_enum::enum_name(result), (UINT) result);
+    }
 }
 
 void XeFG_Dx12::ReleaseObjects()
 {
-    // For each FG_ResourceType
-    for (size_t i = 0; i < 5; i++)
-    {
-        if (this->_copyCommandAllocator.contains((FG_ResourceType) i))
-            this->_copyCommandAllocator[(FG_ResourceType) i]->Release();
-
-        if (this->_copyCommandList.contains((FG_ResourceType) i))
-            this->_copyCommandList[(FG_ResourceType) i]->Release();
-    }
-
-    _copyCommandAllocator.clear();
-    _copyCommandList.clear();
-
     _mvFlip.reset();
     _depthFlip.reset();
 }
 
-void XeFG_Dx12::CreateObjects(ID3D12Device* InDevice)
-{
-    _device = InDevice;
-
-    if (_copyCommandList.size() > 0)
-        ReleaseObjects();
-
-    LOG_DEBUG("");
-
-    do
-    {
-        HRESULT result;
-        ID3D12CommandAllocator* allocator = nullptr;
-        ID3D12GraphicsCommandList* cmdList = nullptr;
-        ID3D12CommandQueue* cmdQueue = nullptr;
-
-        // For each FG_ResourceType
-        for (size_t i = 0; i < 5; i++)
-        {
-            auto val = (FG_ResourceType) i;
-
-            ID3D12CommandAllocator* enumAllocator = nullptr;
-            ID3D12GraphicsCommandList* enumCmdList = nullptr;
-
-            // Copy
-            auto result = InDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-                                                           IID_PPV_ARGS(&this->_copyCommandAllocator[val]));
-            if (result != S_OK)
-            {
-                LOG_ERROR("CreateCommandAllocators _copyCommandAllocator[{}]: {:X}", (UINT) val,
-                          (unsigned long) result);
-                return;
-            }
-
-            this->_copyCommandAllocator[val]->SetName(std::format(L"_copyCommandAllocator[{}]", (UINT) val).c_str());
-            if (CheckForRealObject(__FUNCTION__, this->_copyCommandAllocator[val], (IUnknown**) &enumAllocator))
-                this->_copyCommandAllocator[val] = enumAllocator;
-
-            result = InDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, this->_copyCommandAllocator[val],
-                                                 NULL, IID_PPV_ARGS(&this->_copyCommandList[val]));
-            if (result != S_OK)
-            {
-                LOG_ERROR("CreateCommandList _copyCommandList[{}]: {:X}", (UINT) val, (unsigned long) result);
-                return;
-            }
-
-            this->_copyCommandList[val]->SetName(std::format(L"_copyCommandAllocator[{}]", (UINT) val).c_str());
-            if (CheckForRealObject(__FUNCTION__, this->_copyCommandList[val], (IUnknown**) &enumCmdList))
-                this->_copyCommandList[val] = enumCmdList;
-
-            result = this->_copyCommandList[val]->Close();
-            if (result != S_OK)
-            {
-                LOG_ERROR("_copyCommandList[{}]->Close: {:X}", (UINT) val, (unsigned long) result);
-                return;
-            }
-        }
-
-    } while (false);
-}
+void XeFG_Dx12::CreateObjects(ID3D12Device* InDevice) { _device = InDevice; }
 
 bool XeFG_Dx12::Present() { return Dispatch(); }
 
@@ -695,9 +630,9 @@ void XeFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmd
     if (resource == nullptr)
         return;
 
-    if (cmdList == nullptr && validity == FG_ResourceValidity::ValidNow && _gameCommandQueue == nullptr)
+    if (cmdList == nullptr && validity == FG_ResourceValidity::ValidNow)
     {
-        LOG_ERROR("{}, validity == ValidNow but _gameCommandQueue is nullptr!", magic_enum::enum_name(type));
+        LOG_ERROR("{}, validity == ValidNow but cmdList is nullptr!", magic_enum::enum_name(type));
         return;
     }
 
@@ -710,31 +645,13 @@ void XeFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmd
     fResource->resource = resource;
     fResource->width = width;
     fResource->height = height;
+    fResource->cmdList = cmdList;
 
     auto willFlip = State::Instance().activeFgInput == FGInput::Upscaler &&
                     Config::Instance()->FGResourceFlip.value_or_default() &&
                     (type == FG_ResourceType::Velocity || type == FG_ResourceType::Depth);
 
     auto usingLocalCmdList = false;
-
-    if (cmdList == nullptr)
-    {
-        if (!_copyCommandAllocator.contains(type) || !_copyCommandList.contains(type))
-        {
-            LOG_ERROR("{}, _copyCommandAllocator or _copyCommandList is nullptr!", magic_enum::enum_name(type));
-            return;
-        }
-
-        auto allocator = _copyCommandAllocator[type];
-        cmdList = _copyCommandList[type];
-
-        allocator->Reset();
-        cmdList->Reset(allocator, nullptr);
-
-        usingLocalCmdList = true;
-    }
-
-    fResource->cmdList = cmdList;
 
     // Resource flipping
     if (willFlip && _device != nullptr)
@@ -816,40 +733,28 @@ void XeFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmd
 
     xefg_swapchain_d3d12_resource_data_t resourceParam = GetResourceData(type);
 
-    if (validity == FG_ResourceValidity::UntilPresent)
+    auto result = XeFGProxy::D3D12TagFrameResource()(_swapChainContext, cmdList, _frameCount, &resourceParam);
+    if (result != XEFG_SWAPCHAIN_RESULT_SUCCESS)
     {
-        auto result = XeFGProxy::D3D12TagFrameResource()(_swapChainContext, cmdList, _frameCount, &resourceParam);
+        LOG_ERROR("D3D12TagFrameResource Depth error: {} ({})", magic_enum::enum_name(result), (UINT) result);
+        return;
+    }
+
+    SetResourceReady(type);
+
+    if (type == FG_ResourceType::HudlessColor || type == FG_ResourceType::UIColor)
+    {
+        xefg_swapchain_d3d12_resource_data_t backbuffer = {};
+        backbuffer.type = XEFG_SWAPCHAIN_RES_BACKBUFFER;
+        backbuffer.validity = XEFG_SWAPCHAIN_RV_UNTIL_NEXT_PRESENT;
+        backbuffer.resourceBase = resourceParam.resourceBase;
+        backbuffer.resourceSize = resourceParam.resourceSize;
+
+        auto result = XeFGProxy::D3D12TagFrameResource()(_swapChainContext, cmdList, _frameCount, &backbuffer);
         if (result != XEFG_SWAPCHAIN_RESULT_SUCCESS)
         {
-            LOG_ERROR("D3D12TagFrameResource Depth error: {} ({})", magic_enum::enum_name(result), (UINT) result);
-            return;
+            LOG_ERROR("D3D12TagFrameResource Backbuffer error: {} ({})", magic_enum::enum_name(result), (UINT) result);
         }
-
-        SetResourceReady(type);
-
-        if (usingLocalCmdList)
-        {
-            cmdList->Close();
-            _gameCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList**) &cmdList);
-        }
-    }
-    else
-    {
-        ResTrack_Dx12::SetResourceCmdList(type, cmdList);
-
-        if (!_copyCommandAllocator.contains(type) || !_copyCommandList.contains(type))
-        {
-            LOG_ERROR("{}, _copyCommandAllocator or _copyCommandList is nullptr!", magic_enum::enum_name(type));
-            return;
-        }
-
-        auto allocator = _copyCommandAllocator[type];
-        cmdList = _copyCommandList[type];
-
-        allocator->Reset();
-        cmdList->Reset(allocator, nullptr);
-
-        fResource->cmdList = cmdList;
     }
 
     LOG_TRACE("_frameResources[{}][{}]: {:X}", fIndex, magic_enum::enum_name(type), (size_t) fResource->GetResource());
@@ -857,33 +762,4 @@ void XeFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmd
 
 void XeFG_Dx12::SetResourceReady(FG_ResourceType type) { _resourceReady[GetIndex()][type] = true; }
 
-void XeFG_Dx12::SetCommandQueue(FG_ResourceType type, ID3D12CommandQueue* queue)
-{
-    //_gameCommandQueue = queue;
-
-    auto fIndex = GetIndex();
-
-    if (!_frameResources[fIndex].contains(type))
-        return;
-
-    auto fResource = &_frameResources[fIndex][type];
-
-    auto resourceParam = GetResourceData(type);
-    if (resourceParam.pResource == nullptr)
-        return;
-
-    if (fResource->validity == FG_ResourceValidity::JustTrackCmdlist)
-        resourceParam.validity == XEFG_SWAPCHAIN_RV_UNTIL_NEXT_PRESENT;
-
-    auto result =
-        XeFGProxy::D3D12TagFrameResource()(_swapChainContext, fResource->cmdList, _frameCount, &resourceParam);
-    if (result != XEFG_SWAPCHAIN_RESULT_SUCCESS)
-    {
-        LOG_ERROR("D3D12TagFrameResource {} error: {} ({})", magic_enum::enum_name(type), magic_enum::enum_name(result),
-                  (UINT) result);
-        return;
-    }
-
-    ((ID3D12GraphicsCommandList*) fResource->cmdList)->Close();
-    _gameCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList**) &fResource->cmdList);
-}
+void XeFG_Dx12::SetCommandQueue(FG_ResourceType type, ID3D12CommandQueue* queue) { _gameCommandQueue = queue; }

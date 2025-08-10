@@ -23,10 +23,7 @@ class XeFG_Dx12 : public virtual IFGFeature_Dx12
     uint32_t _height = 0;
     int _featureFlags = 0;
 
-    // For copy operations
     std::map<FG_ResourceType, ID3D12Resource*> _resourceCopy[BUFFER_COUNT] {};
-    std::map<FG_ResourceType, ID3D12GraphicsCommandList*> _copyCommandList {};
-    std::map<FG_ResourceType, ID3D12CommandAllocator*> _copyCommandAllocator {};
 
     static void xefgLogCallback(const char* message, xefg_swapchain_logging_level_t level, void* userData);
 
