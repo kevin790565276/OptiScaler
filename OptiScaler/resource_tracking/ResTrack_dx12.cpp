@@ -1868,6 +1868,9 @@ void ResTrack_Dx12::ClearPossibleHudless()
     {
         auto fIndex = fg->GetIndex();
 
+        if (_notFoundCmdLists.size() > 10)
+            _notFoundCmdLists.clear();
+
         for (const auto& pair : _resourceCommandList[fIndex])
         {
             LOG_WARN("{} cmdList: {:X}, not closed!", (UINT) pair.first, (size_t) pair.second);
@@ -1900,6 +1903,6 @@ void ResTrack_Dx12::SetResourceCmdList(FG_ResourceType type, ID3D12GraphicsComma
             realCmdList = cmdList;
 
         _resourceCommandList[index][type] = realCmdList;
-        LOG_DEBUG("_resourceCommandList[{}][{}]: {:X}", index, (UINT) type, (size_t) realCmdList);
+        LOG_DEBUG("_resourceCommandList[{}][{}]: {:X}", index, magic_enum::enum_name(type), (size_t) realCmdList);
     }
 }
