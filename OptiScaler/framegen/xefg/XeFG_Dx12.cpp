@@ -479,18 +479,19 @@ bool XeFG_Dx12::Dispatch()
 
     LOG_DEBUG("Output Base: {}:{}, Size: {}x{}", left, top, width, height);
 
-    xefg_swapchain_d3d12_resource_data_t backbuffer = {};
-    backbuffer.type = XEFG_SWAPCHAIN_RES_BACKBUFFER;
-    backbuffer.resourceBase = { left, top };
-    backbuffer.resourceSize = { width, height };
+    // xefg_swapchain_d3d12_resource_data_t backbuffer = {};
+    // backbuffer.type = XEFG_SWAPCHAIN_RES_BACKBUFFER;
+    // backbuffer.resourceBase = { left, top };
+    // backbuffer.resourceSize = { width, height };
 
-    auto result = XeFGProxy::D3D12TagFrameResource()(_swapChainContext, _copyCommandList[FG_ResourceType::Distortion],
-                                                     _frameCount, &backbuffer);
-    if (result != XEFG_SWAPCHAIN_RESULT_SUCCESS)
-    {
-        LOG_ERROR("D3D12TagFrameResource Backbuffer error: {} ({})", magic_enum::enum_name(result), (UINT) result);
-        return false;
-    }
+    // auto result = XeFGProxy::D3D12TagFrameResource()(_swapChainContext,
+    // _copyCommandList[FG_ResourceType::Distortion],
+    //                                                  _frameCount, &backbuffer);
+    // if (result != XEFG_SWAPCHAIN_RESULT_SUCCESS)
+    //{
+    //     LOG_ERROR("D3D12TagFrameResource Backbuffer error: {} ({})", magic_enum::enum_name(result), (UINT) result);
+    //     return false;
+    // }
 
     xefg_swapchain_frame_constant_data_t constData = {};
 
@@ -530,7 +531,7 @@ bool XeFG_Dx12::Dispatch()
 
     LOG_DEBUG("Reset: {}, FTDelta: {}", _reset, _ftDelta);
 
-    result = XeFGProxy::TagFrameConstants()(_swapChainContext, _frameCount, &constData);
+    auto result = XeFGProxy::TagFrameConstants()(_swapChainContext, _frameCount, &constData);
     if (result != XEFG_SWAPCHAIN_RESULT_SUCCESS)
     {
         LOG_ERROR("TagFrameConstants error: {} ({})", magic_enum::enum_name(result), (UINT) result);
@@ -717,7 +718,7 @@ void XeFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmd
 
     auto usingLocalCmdList = false;
 
-    if (cmdList == nullptr)
+    if (cmdList == nullptr && (validity == FG_ResourceValidity::ValidNow || willFlip))
     {
         if (!_copyCommandAllocator.contains(type) || !_copyCommandList.contains(type))
         {
@@ -816,7 +817,8 @@ void XeFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmd
 
     xefg_swapchain_d3d12_resource_data_t resourceParam = GetResourceData(type);
 
-    if (validity == FG_ResourceValidity::UntilPresent)
+    if (validity == FG_ResourceValidity::UntilPresent ||
+        (cmdList != nullptr && validity == FG_ResourceValidity::ValidNow))
     {
         auto result = XeFGProxy::D3D12TagFrameResource()(_swapChainContext, cmdList, _frameCount, &resourceParam);
         if (result != XEFG_SWAPCHAIN_RESULT_SUCCESS)
@@ -873,7 +875,7 @@ void XeFG_Dx12::SetCommandQueue(FG_ResourceType type, ID3D12CommandQueue* queue)
         return;
 
     if (fResource->validity == FG_ResourceValidity::JustTrackCmdlist)
-        resourceParam.validity == XEFG_SWAPCHAIN_RV_UNTIL_NEXT_PRESENT;
+        resourceParam.validity = XEFG_SWAPCHAIN_RV_UNTIL_NEXT_PRESENT;
 
     auto result =
         XeFGProxy::D3D12TagFrameResource()(_swapChainContext, fResource->cmdList, _frameCount, &resourceParam);
