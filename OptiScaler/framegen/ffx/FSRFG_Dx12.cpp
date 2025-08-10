@@ -219,7 +219,7 @@ bool FSRFG_Dx12::Dispatch()
         dfgPrepare.header.pNext = &dfgCameraData.header;
 
         // Prepare command list
-        auto allocator = _fgCommandAllocator;
+        auto allocator = _fgCommandAllocator[fIndex];
         auto result = allocator->Reset();
         if (result != S_OK)
         {
@@ -227,14 +227,14 @@ bool FSRFG_Dx12::Dispatch()
             return false;
         }
 
-        result = _fgCommandList->Reset(allocator, nullptr);
+        result = _fgCommandList[fIndex]->Reset(allocator, nullptr);
         if (result != S_OK)
         {
             LOG_ERROR("_hudlessCommandList[fIndex]->Reset error: {:X}", (UINT) result);
             return false;
         }
 
-        dfgPrepare.commandList = _fgCommandList;
+        dfgPrepare.commandList = _fgCommandList[fIndex];
         dfgPrepare.frameID = _frameCount;
         dfgPrepare.flags = m_FrameGenerationConfig.flags;
 
@@ -284,7 +284,7 @@ bool FSRFG_Dx12::Dispatch()
                   fIndex, (size_t) dfgPrepare.commandList);
 
         if (retCode == FFX_API_RETURN_OK)
-            _fgCommandList->Close();
+            _fgCommandList[fIndex]->Close();
     }
 
     if (Config::Instance()->FGUseMutexForSwapchain.value_or_default() && Mutex.getOwner() == 1)
@@ -672,16 +672,19 @@ void FSRFG_Dx12::ReleaseObjects()
 {
     LOG_DEBUG("");
 
-    if (_fgCommandAllocator != nullptr)
+    for (size_t i = 0; i < BUFFER_COUNT; i++)
     {
-        _fgCommandAllocator->Release();
-        _fgCommandAllocator = nullptr;
-    }
+        if (_fgCommandAllocator[i] != nullptr)
+        {
+            _fgCommandAllocator[i]->Release();
+            _fgCommandAllocator[i] = nullptr;
+        }
 
-    if (_fgCommandList != nullptr)
-    {
-        _fgCommandList->Release();
-        _fgCommandList = nullptr;
+        if (_fgCommandList[i] != nullptr)
+        {
+            _fgCommandList[i]->Release();
+            _fgCommandList[i] = nullptr;
+        }
     }
 
     _mvFlip.reset();
@@ -694,8 +697,10 @@ bool FSRFG_Dx12::ExecuteCommandList()
 
     if (WaitingExecution())
     {
-        LOG_DEBUG("Executing FG cmdList: {:X} with queue: {:X}", (size_t) _fgCommandList, (size_t) _gameCommandQueue);
-        _gameCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList**) &_fgCommandList);
+        auto fIndex = GetIndex();
+        LOG_DEBUG("Executing FG cmdList: {:X} with queue: {:X}", (size_t) _fgCommandList[fIndex],
+                  (size_t) _gameCommandQueue);
+        _gameCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList**) &_fgCommandList[fIndex]);
         SetExecuted();
         return true;
     }
@@ -862,33 +867,37 @@ void FSRFG_Dx12::CreateObjects(ID3D12Device* InDevice)
         ID3D12CommandQueue* cmdQueue = nullptr;
 
         // FG
-        result = InDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&_fgCommandAllocator));
-        if (result != S_OK)
+        for (size_t i = 0; i < BUFFER_COUNT; i++)
         {
-            LOG_ERROR("CreateCommandAllocators _fgCommandAllocator: {:X}", (unsigned long) result);
-            break;
-        }
+            result =
+                InDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&_fgCommandAllocator[i]));
+            if (result != S_OK)
+            {
+                LOG_ERROR("CreateCommandAllocators _fgCommandAllocator[{}]: {:X}", i, (unsigned long) result);
+                break;
+            }
 
-        _fgCommandAllocator->SetName(L"_fgCommandAllocator");
-        if (CheckForRealObject(__FUNCTION__, _fgCommandAllocator, (IUnknown**) &allocator))
-            _fgCommandAllocator = allocator;
+            _fgCommandAllocator[i]->SetName(std::format(L"_fgCommandAllocator[{}]", i).c_str());
+            if (CheckForRealObject(__FUNCTION__, _fgCommandAllocator[i], (IUnknown**) &allocator))
+                _fgCommandAllocator[i] = allocator;
 
-        result = InDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, _fgCommandAllocator, NULL,
-                                             IID_PPV_ARGS(&_fgCommandList));
-        if (result != S_OK)
-        {
-            LOG_ERROR("CreateCommandList _hudlessCommandList: {:X}", (unsigned long) result);
-            break;
-        }
-        _fgCommandList->SetName(L"_fgCommandList");
-        if (CheckForRealObject(__FUNCTION__, _fgCommandList, (IUnknown**) &cmdList))
-            _fgCommandList = cmdList;
+            result = InDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, _fgCommandAllocator[i], NULL,
+                                                 IID_PPV_ARGS(&_fgCommandList[i]));
+            if (result != S_OK)
+            {
+                LOG_ERROR("CreateCommandList _hudlessCommandList[{}]: {:X}", i, (unsigned long) result);
+                break;
+            }
+            _fgCommandList[i]->SetName(std::format(L"_fgCommandList[{}]", i).c_str());
+            if (CheckForRealObject(__FUNCTION__, _fgCommandList[i], (IUnknown**) &cmdList))
+                _fgCommandList[i] = cmdList;
 
-        result = _fgCommandList->Close();
-        if (result != S_OK)
-        {
-            LOG_ERROR("_fgCommandList->Close: {:X}", (unsigned long) result);
-            break;
+            result = _fgCommandList[i]->Close();
+            if (result != S_OK)
+            {
+                LOG_ERROR("_fgCommandList[{}]->Close: {:X}", i, (unsigned long) result);
+                break;
+            }
         }
 
     } while (false);
