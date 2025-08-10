@@ -127,7 +127,7 @@ bool Sl_Inputs_Dx12::evaluateState(ID3D12Device* device)
 bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCommandList* cmdBuffer, uint32_t frameId)
 {
     if (!cmdBuffer)
-        LOG_ERROR("cmdBuffer is null");
+        LOG_TRACE("cmdBuffer is null");
 
     auto fgOutput = reinterpret_cast<IFGFeature_Dx12*>(State::Instance().currentFG);
 
@@ -166,15 +166,18 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
         auto hudlessResource = (ID3D12Resource*) tag.resource->native;
 
         const auto validity =
-            (tag.lifecycle == sl::eOnlyValidNow) ? FG_ResourceValidity::ValidNow : FG_ResourceValidity::UntilPresent;
-        fgOutput->SetResource(FG_ResourceType::HudlessColor, cmdBuffer, hudlessResource, tag.resource->width,
-                              tag.resource->height, (D3D12_RESOURCE_STATES) tag.resource->state, validity);
+            (tag.lifecycle != sl::eOnlyValidNow) ? FG_ResourceValidity::UntilPresent : FG_ResourceValidity::ValidNow;
+        fgOutput->SetResource(FG_ResourceType::HudlessColor, cmdBuffer, hudlessResource, tag.extent.width,
+                              tag.extent.height, (D3D12_RESOURCE_STATES) tag.resource->state, validity);
+
+        // Assume hudless is the size used for interpolation
+        interpolationWidth = tag.extent.width;
+        interpolationHeight = tag.extent.height;
 
         auto static lastFormat = DXGI_FORMAT_UNKNOWN;
         auto format = hudlessResource->GetDesc().Format;
 
         // This might be specific to FSR FG
-        // Hopefully we don't need to use ffxCreateContextDescFrameGenerationHudless
         if (lastFormat != DXGI_FORMAT_UNKNOWN && lastFormat != format)
         {
             State::Instance().FGchanged = true;
@@ -193,9 +196,9 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
         auto depthResource = (ID3D12Resource*) tag.resource->native;
 
         const auto validity =
-            (tag.lifecycle == sl::eOnlyValidNow) ? FG_ResourceValidity::ValidNow : FG_ResourceValidity::UntilPresent;
-        fgOutput->SetResource(FG_ResourceType::Depth, cmdBuffer, depthResource, tag.resource->width,
-                              tag.resource->height, (D3D12_RESOURCE_STATES) tag.resource->state, validity);
+            (tag.lifecycle != sl::eOnlyValidNow) ? FG_ResourceValidity::UntilPresent : FG_ResourceValidity::ValidNow;
+        fgOutput->SetResource(FG_ResourceType::Depth, cmdBuffer, depthResource, tag.extent.width, tag.extent.height,
+                              (D3D12_RESOURCE_STATES) tag.resource->state, validity);
     }
     else if (tag.type == sl::kBufferTypeMotionVectors)
     {
@@ -208,9 +211,9 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
         auto mvResource = (ID3D12Resource*) tag.resource->native;
 
         const auto validity =
-            (tag.lifecycle == sl::eOnlyValidNow) ? FG_ResourceValidity::ValidNow : FG_ResourceValidity::UntilPresent;
-        fgOutput->SetResource(FG_ResourceType::Velocity, cmdBuffer, mvResource, tag.resource->width,
-                              tag.resource->height, (D3D12_RESOURCE_STATES) tag.resource->state, validity);
+            (tag.lifecycle != sl::eOnlyValidNow) ? FG_ResourceValidity::UntilPresent : FG_ResourceValidity::ValidNow;
+        fgOutput->SetResource(FG_ResourceType::Velocity, cmdBuffer, mvResource, tag.extent.width, tag.extent.height,
+                              (D3D12_RESOURCE_STATES) tag.resource->state, validity);
     }
     else if (tag.type == sl::kBufferTypeUIColorAndAlpha)
     {
@@ -224,10 +227,10 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
             auto uiResource = (ID3D12Resource*) tag.resource->native;
 
-            const auto validity = (tag.lifecycle == sl::eOnlyValidNow) ? FG_ResourceValidity::ValidNow
-                                                                       : FG_ResourceValidity::UntilPresent;
-            fgOutput->SetResource(FG_ResourceType::UIColor, cmdBuffer, uiResource, tag.resource->width,
-                                  tag.resource->height, (D3D12_RESOURCE_STATES) tag.resource->state, validity);
+            const auto validity = (tag.lifecycle != sl::eOnlyValidNow) ? FG_ResourceValidity::UntilPresent
+                                                                       : FG_ResourceValidity::ValidNow;
+            fgOutput->SetResource(FG_ResourceType::UIColor, cmdBuffer, uiResource, tag.extent.width, tag.extent.height,
+                                  (D3D12_RESOURCE_STATES) tag.resource->state, validity);
         }
     }
     else if (tag.type == sl::kBufferTypeBidirectionalDistortionField)
@@ -241,9 +244,9 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
         auto distortionFieldResource = (ID3D12Resource*) tag.resource->native;
 
         const auto validity =
-            (tag.lifecycle == sl::eOnlyValidNow) ? FG_ResourceValidity::ValidNow : FG_ResourceValidity::UntilPresent;
-        fgOutput->SetResource(FG_ResourceType::Distortion, cmdBuffer, distortionFieldResource, tag.resource->width,
-                              tag.resource->height, (D3D12_RESOURCE_STATES) tag.resource->state, validity);
+            (tag.lifecycle != sl::eOnlyValidNow) ? FG_ResourceValidity::UntilPresent : FG_ResourceValidity::ValidNow;
+        fgOutput->SetResource(FG_ResourceType::Distortion, cmdBuffer, distortionFieldResource, tag.extent.width,
+                              tag.extent.height, (D3D12_RESOURCE_STATES) tag.resource->state, validity);
     }
 
     if (readyForDispatch())
@@ -362,6 +365,8 @@ bool Sl_Inputs_Dx12::dispatchFG(ID3D12GraphicsCommandList* cmdBuffer)
         reinterpret_cast<float*>(&slConstsRef.cameraRight), reinterpret_cast<float*>(&slConstsRef.cameraFwd));
 
     fgOutput->SetReset(slConstsRef.reset == sl::Boolean::eTrue);
+
+    fgOutput->SetInterpolationRect(interpolationWidth, interpolationHeight);
 
     return true;
 }

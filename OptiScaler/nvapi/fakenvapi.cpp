@@ -1,9 +1,6 @@
 #include "fakenvapi.h"
 #include "proxies/FfxApi_Proxy.h"
 
-void* fakenvapi::_lowLatencyContext = nullptr;
-Mode fakenvapi::_lowLatencyMode = Mode::LatencyFlex;
-
 void fakenvapi::Init(PFN_NvApi_QueryInterface& queryInterface)
 {
     if (_inited)
@@ -84,7 +81,10 @@ void fakenvapi::reportFGPresent(IDXGISwapChain* pSwapChain, bool fg_state, bool 
 
 bool fakenvapi::updateModeAndContext()
 {
-    if (!isUsingFakenvapi())
+    if (!isUsingFakenvapi() && State::Instance().activeFgOutput == FGOutput::XeFG)
+        auto loaded = fakenvapi::loadForNvidia();
+
+    if (!isUsingFakenvapi() && !isUsingFakenvapiOnNvidia())
         return false;
 
     LOG_FUNC();
@@ -120,7 +120,10 @@ bool fakenvapi::updateModeAndContext()
 
 bool fakenvapi::setModeAndContext(void* context, Mode mode)
 {
-    if (!isUsingFakenvapi())
+    if (!isUsingFakenvapi() && State::Instance().activeFgOutput == FGOutput::XeFG)
+        auto loaded = fakenvapi::loadForNvidia();
+
+    if (!isUsingFakenvapi() && !isUsingFakenvapiOnNvidia())
         return false;
 
     LOG_FUNC();
@@ -138,8 +141,54 @@ bool fakenvapi::setModeAndContext(void* context, Mode mode)
     return false;
 }
 
+bool fakenvapi::loadForNvidia()
+{
+    if (!State::Instance().isRunningOnNvidia)
+        return false;
+
+    if (_dllForNvidia != nullptr)
+        return true;
+
+    _dllForNvidia = KernelBaseProxy::LoadLibraryExW_()(L"fakenvapi.dll", NULL, 0);
+
+    if (!_dllForNvidia)
+        return false;
+
+    auto queryInterface =
+        (PFN_NvApi_QueryInterface) KernelBaseProxy::GetProcAddress_()(_dllForNvidia, "nvapi_QueryInterface");
+
+    if (queryInterface == nullptr)
+    {
+        _dllForNvidia = nullptr;
+        return false;
+    }
+
+    ForNvidia_SetSleepMode = GET_INTERFACE(NvAPI_D3D_SetSleepMode, queryInterface);
+    ForNvidia_Sleep = GET_INTERFACE(NvAPI_D3D_Sleep, queryInterface);
+    ForNvidia_GetLatency = GET_INTERFACE(NvAPI_D3D_GetLatency, queryInterface);
+    ForNvidia_SetLatencyMarker = GET_INTERFACE(NvAPI_D3D_SetLatencyMarker, queryInterface);
+    ForNvidia_SetAsyncFrameMarker = GET_INTERFACE(NvAPI_D3D12_SetAsyncFrameMarker, queryInterface);
+
+    Fake_InformFGState = static_cast<decltype(Fake_InformFGState)>(queryInterface(GET_ID(Fake_InformFGState)));
+    Fake_InformPresentFG = static_cast<decltype(Fake_InformPresentFG)>(queryInterface(GET_ID(Fake_InformPresentFG)));
+    Fake_GetAntiLagCtx = static_cast<decltype(Fake_GetAntiLagCtx)>(queryInterface(GET_ID(Fake_GetAntiLagCtx)));
+    Fake_GetLowLatencyCtx = static_cast<decltype(Fake_GetLowLatencyCtx)>(queryInterface(GET_ID(Fake_GetLowLatencyCtx)));
+    Fake_SetLowLatencyCtx = static_cast<decltype(Fake_SetLowLatencyCtx)>(queryInterface(GET_ID(Fake_SetLowLatencyCtx)));
+
+    if (Fake_SetLowLatencyCtx)
+    {
+        _initedForNvidia = true;
+        LOG_INFO("fakenvapi initialized for Nvidia");
+        return true;
+    }
+
+    LOG_INFO("Failed to initialize fakenvapi for Nvidia");
+    return false;
+}
+
 // updateModeAndContext needs to be called before that
 Mode fakenvapi::getCurrentMode() { return _lowLatencyMode; }
 
-// won't work with older fakenvapi builds
 bool fakenvapi::isUsingFakenvapi() { return _inited; }
+
+bool fakenvapi::isUsingFakenvapiOnNvidia() { return _initedForNvidia; }

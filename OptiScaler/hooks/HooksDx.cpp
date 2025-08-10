@@ -268,8 +268,7 @@ static HRESULT hkFGPresent(void* This, UINT SyncInterval, UINT Flags)
         LOG_TRACE("Accuired FG->Mutex: {}", fg->Mutex.getOwner());
     }
 
-    if (willPresent && State::Instance().currentCommandQueue != nullptr &&
-        State::Instance().activeFgInput == FGInput::Upscaler && fg != nullptr && fg->IsActive())
+    if (willPresent && State::Instance().currentCommandQueue != nullptr && fg != nullptr && fg->IsActive())
     {
         fg->Present();
     }

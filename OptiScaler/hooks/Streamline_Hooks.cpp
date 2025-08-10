@@ -108,6 +108,12 @@ sl::Result StreamlineHooks::hkslInit(sl::Preferences* pref, uint64_t sdkVersion)
     renderApi = pref->renderAPI;
     State::Instance().slFGInputs.reportEngineType(pref->engine);
 
+    // bool hookSetTag =
+    //     (State::Instance().activeFgInput == FGInput::Nukems || State::Instance().activeFgInput == FGInput::DLSSG);
+
+    // if (hookSetTag)
+    //     pref->flags &= ~(sl::PreferenceFlags::eAllowOTA | sl::PreferenceFlags::eLoadDownloadedPlugins);
+
     return o_slInit(*pref, sdkVersion);
 }
 
@@ -122,6 +128,12 @@ sl::Result StreamlineHooks::hkslSetTag(sl::ViewportHandle& viewport, sl::Resourc
 
     for (uint32_t i = 0; i < numTags; i++)
     {
+        if (tags[i].resource == nullptr)
+        {
+            LOG_TRACE("Resource of type: {} is null, continuing", tags[i].type);
+            continue;
+        }
+
         // Cyberpunk hudless state fix for RDNA 2
         if (State::Instance().gameQuirks & GameQuirk::CyberpunkHudlessStateOverride &&
             tags[i].resource->state ==
@@ -158,6 +170,12 @@ sl::Result StreamlineHooks::hkslSetTagForFrame(const sl::FrameToken& frame, cons
 
     for (uint32_t i = 0; i < numResources; i++)
     {
+        if (resources[i].resource == nullptr)
+        {
+            LOG_TRACE("Resource of type: {} is null, continuing", resources[i].type);
+            continue;
+        }
+
         if (State::Instance().activeFgInput == FGInput::DLSSG &&
             (resources[i].type == sl::kBufferTypeHUDLessColor || resources[i].type == sl::kBufferTypeDepth ||
              resources[i].type == sl::kBufferTypeHiResDepth || resources[i].type == sl::kBufferTypeLinearDepth ||
@@ -692,6 +710,8 @@ void StreamlineHooks::hookInterposer(HMODULE slInterposer)
         char dllPath[MAX_PATH];
         GetModuleFileNameA(slInterposer, dllPath, MAX_PATH);
 
+        LOG_TRACE("slInterposer path: {}", dllPath);
+
         Util::version_t sl_version;
         Util::GetDLLVersion(string_to_wstring(dllPath), &sl_version);
 
@@ -727,8 +747,8 @@ void StreamlineHooks::hookInterposer(HMODULE slInterposer)
 
                 DetourAttach(&(PVOID&) o_slInit, hkslInit);
 
-                bool hookSetTag = (Config::Instance()->FGInput.value_or_default() == FGInput::Nukems ||
-                                   Config::Instance()->FGInput.value_or_default() == FGInput::DLSSG);
+                bool hookSetTag = (State::Instance().activeFgInput == FGInput::Nukems ||
+                                   State::Instance().activeFgInput == FGInput::DLSSG);
 
                 if (o_slSetTag != nullptr && hookSetTag)
                     DetourAttach(&(PVOID&) o_slSetTag, hkslSetTag);
@@ -736,20 +756,20 @@ void StreamlineHooks::hookInterposer(HMODULE slInterposer)
                 if (o_slSetTagForFrame != nullptr && hookSetTag)
                     DetourAttach(&(PVOID&) o_slSetTagForFrame, hkslSetTagForFrame);
 
-                if (o_slEvaluateFeature != nullptr)
-                    DetourAttach(&(PVOID&) o_slEvaluateFeature, hkslEvaluateFeature);
-
-                if (o_slAllocateResources != nullptr)
-                    DetourAttach(&(PVOID&) o_slAllocateResources, hkslAllocateResources);
-
-                if (o_slSetConstants != nullptr)
+                if (o_slSetConstants != nullptr && hookSetTag)
                     DetourAttach(&(PVOID&) o_slSetConstants, hkslSetConstants);
 
-                if (o_slGetNativeInterface != nullptr)
-                    DetourAttach(&(PVOID&) o_slGetNativeInterface, hkslGetNativeInterface);
+                // if (o_slEvaluateFeature != nullptr)
+                //     DetourAttach(&(PVOID&) o_slEvaluateFeature, hkslEvaluateFeature);
 
-                if (o_slSetD3DDevice != nullptr)
-                    DetourAttach(&(PVOID&) o_slSetD3DDevice, hkslSetD3DDevice);
+                // if (o_slAllocateResources != nullptr)
+                //     DetourAttach(&(PVOID&) o_slAllocateResources, hkslAllocateResources);
+
+                // if (o_slGetNativeInterface != nullptr)
+                //     DetourAttach(&(PVOID&) o_slGetNativeInterface, hkslGetNativeInterface);
+
+                // if (o_slSetD3DDevice != nullptr)
+                //     DetourAttach(&(PVOID&) o_slSetD3DDevice, hkslSetD3DDevice);
 
                 DetourTransactionCommit();
             }

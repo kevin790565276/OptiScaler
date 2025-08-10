@@ -25,6 +25,9 @@ class Sl_Inputs_Dx12
     bool frameBasedTracking = false;
     uint32_t indexToFrameIdMapping[BUFFER_COUNT] {};
 
+    uint32_t interpolationWidth = 0;
+    uint32_t interpolationHeight = 0;
+
     std::optional<sl::Constants>* getFrameData(IFGFeature_Dx12* fgOutput);
 
   public:
