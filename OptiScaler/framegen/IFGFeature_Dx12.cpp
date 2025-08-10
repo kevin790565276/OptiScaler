@@ -3,6 +3,8 @@
 #include <State.h>
 #include <Config.h>
 
+#include <magic_enum.hpp>
+
 void IFGFeature_Dx12::GetResourceCopy(FG_ResourceType type, D3D12_RESOURCE_STATES bufferState, ID3D12Resource** output)
 {
     // if (!_commandAllocators[BUFFER_COUNT] || !_commandList[BUFFER_COUNT])
@@ -43,6 +45,64 @@ void IFGFeature_Dx12::NewFrame()
     auto fIndex = GetIndex();
 
     _frameResources[fIndex].clear();
+}
+
+void IFGFeature_Dx12::FlipResource(Dx12Resource* resource)
+{
+    auto type = resource->type;
+
+    if (type != FG_ResourceType::Depth && type != FG_ResourceType::Velocity)
+        return;
+
+    auto fIndex = GetIndex();
+    ID3D12Resource* flipOutput = nullptr;
+    std::unique_ptr<RF_Dx12>* flip = nullptr;
+
+    flipOutput = _resourceCopy[fIndex][type];
+
+    if (!CreateBufferResource(_device, resource->resource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, &flipOutput, true,
+                              false))
+    {
+        LOG_ERROR("{}, CreateBufferResource for flip is failed!", magic_enum::enum_name(type));
+        return;
+    }
+
+    _resourceCopy[fIndex][type] = flipOutput;
+
+    if (type != FG_ResourceType::Depth)
+    {
+        if (_depthFlip.get() == nullptr)
+        {
+            _depthFlip = std::make_unique<RF_Dx12>("DepthFlip", _device);
+            return;
+        }
+
+        flip = &_depthFlip;
+    }
+    else
+    {
+        if (_mvFlip.get() == nullptr)
+        {
+            _mvFlip = std::make_unique<RF_Dx12>("VelocityFlip", _device);
+            return;
+        }
+
+        flip = &_mvFlip;
+    }
+
+    if (flip->get()->IsInit())
+    {
+        auto result = flip->get()->Dispatch(_device, (ID3D12GraphicsCommandList*) resource->cmdList, resource->resource,
+                                            flipOutput, resource->width, resource->height, true);
+
+        if (result)
+        {
+            LOG_TRACE("Setting velocity from flip, index: {}", fIndex);
+            auto fResource = &_frameResources[fIndex][type];
+            fResource->copy = flipOutput;
+            fResource->state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        }
+    }
 }
 
 bool IFGFeature_Dx12::CreateBufferResourceWithSize(ID3D12Device* device, ID3D12Resource* source,

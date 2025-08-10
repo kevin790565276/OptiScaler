@@ -36,6 +36,7 @@ class IFGFeature_Dx12 : public virtual IFGFeature
     HWND _hwnd = NULL;
 
     std::map<FG_ResourceType, Dx12Resource> _frameResources[BUFFER_COUNT] {};
+    std::map<FG_ResourceType, ID3D12Resource*> _resourceCopy[BUFFER_COUNT] {};
 
     std::unique_ptr<RF_Dx12> _mvFlip;
     std::unique_ptr<RF_Dx12> _depthFlip;
@@ -50,6 +51,7 @@ class IFGFeature_Dx12 : public virtual IFGFeature
                       D3D12_RESOURCE_STATES sourceState);
 
     void NewFrame() override final;
+    void FlipResource(Dx12Resource* resource);
 
   public:
     virtual bool CreateSwapchain(IDXGIFactory* factory, ID3D12CommandQueue* cmdQueue, DXGI_SWAP_CHAIN_DESC* desc,

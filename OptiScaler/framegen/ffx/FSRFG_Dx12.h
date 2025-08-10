@@ -18,12 +18,8 @@ class FSRFG_Dx12 : public virtual IFGFeature_Dx12
     FfxApiSurfaceFormat _lastHudlessFormat = FFX_API_SURFACE_FORMAT_UNKNOWN;
     FfxApiSurfaceFormat _usingHudlessFormat = FFX_API_SURFACE_FORMAT_UNKNOWN;
 
-    // One extra to copy things
     ID3D12GraphicsCommandList* _fgCommandList[BUFFER_COUNT] {};
     ID3D12CommandAllocator* _fgCommandAllocator[BUFFER_COUNT] {};
-
-    // For copy operations
-    std::map<FG_ResourceType, ID3D12Resource*> _resourceCopy[BUFFER_COUNT] {};
 
     static FfxApiResourceState GetFfxApiState(D3D12_RESOURCE_STATES state)
     {

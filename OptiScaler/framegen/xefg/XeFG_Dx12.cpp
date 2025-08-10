@@ -596,80 +596,12 @@ void XeFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmd
     // Resource flipping
     if (willFlip && _device != nullptr)
     {
-        if (type == FG_ResourceType::Velocity)
-        {
-            ID3D12Resource* flipOutput = nullptr;
-
-            flipOutput = _resourceCopy[fIndex][type];
-
-            if (!CreateBufferResource(_device, resource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, &flipOutput, true,
-                                      false))
-            {
-                LOG_ERROR("{}, CreateBufferResource for flip is failed!", magic_enum::enum_name(type));
-                return;
-            }
-
-            _resourceCopy[fIndex][type] = flipOutput;
-
-            if (_mvFlip.get() == nullptr)
-            {
-                _mvFlip = std::make_unique<RF_Dx12>("VelocityFlip", _device);
-            }
-            else if (_mvFlip->IsInit())
-            {
-                auto feature = State::Instance().currentFeature;
-                UINT width = feature->LowResMV() ? feature->RenderWidth() : feature->DisplayWidth();
-                UINT height = feature->LowResMV() ? feature->RenderHeight() : feature->DisplayHeight();
-
-                auto result = _mvFlip->Dispatch(_device, cmdList, resource, flipOutput, width, height, true);
-
-                if (result)
-                {
-                    LOG_TRACE("Setting velocity from flip, index: {}", fIndex);
-                    fResource->copy = flipOutput;
-                    fResource->state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-                }
-            }
-        }
-        else if (type == FG_ResourceType::Depth)
-        {
-            ID3D12Resource* flipOutput = nullptr;
-
-            flipOutput = _resourceCopy[fIndex][type];
-
-            if (!CreateBufferResource(_device, resource, state, &flipOutput, true, true))
-            {
-                LOG_ERROR("{}, CreateBufferResource for flip is failed!", magic_enum::enum_name(type));
-                return;
-            }
-
-            _resourceCopy[fIndex][type] = flipOutput;
-
-            if (_depthFlip.get() == nullptr)
-            {
-                _depthFlip = std::make_unique<RF_Dx12>("DepthFlip", _device);
-            }
-            else if (_depthFlip->IsInit())
-            {
-                auto feature = State::Instance().currentFeature;
-                UINT width = feature->LowResMV() ? feature->RenderWidth() : feature->DisplayWidth();
-                UINT height = feature->LowResMV() ? feature->RenderHeight() : feature->DisplayHeight();
-
-                ResourceBarrier(cmdList, flipOutput, state, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-                auto result = _depthFlip->Dispatch(_device, cmdList, resource, flipOutput, width, height, false);
-                ResourceBarrier(cmdList, flipOutput, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, state);
-
-                if (result)
-                {
-                    LOG_TRACE("Setting velocity from flip, index: {}", fIndex);
-                    fResource->copy = flipOutput;
-                }
-            }
-        }
+        FlipResource(fResource);
     }
 
-    fResource->validity = (validity != FG_ResourceValidity::ValidNow && !willFlip) ? FG_ResourceValidity::UntilPresent
-                                                                                   : FG_ResourceValidity::ValidNow;
+    fResource->validity = (fResource->validity != FG_ResourceValidity::ValidNow || willFlip)
+                              ? FG_ResourceValidity::UntilPresent
+                              : FG_ResourceValidity::ValidNow;
 
     xefg_swapchain_d3d12_resource_data_t resourceParam = GetResourceData(type);
 

@@ -23,8 +23,6 @@ class XeFG_Dx12 : public virtual IFGFeature_Dx12
     uint32_t _height = 0;
     int _featureFlags = 0;
 
-    std::map<FG_ResourceType, ID3D12Resource*> _resourceCopy[BUFFER_COUNT] {};
-
     static void xefgLogCallback(const char* message, xefg_swapchain_logging_level_t level, void* userData);
 
     bool CreateSwapchainContext(ID3D12Device* device);
