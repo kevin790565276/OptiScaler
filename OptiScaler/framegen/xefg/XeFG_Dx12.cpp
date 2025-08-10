@@ -113,10 +113,8 @@ void XeFG_Dx12::StopAndDestroyContext(bool destroy, bool shutDown)
             LOG_INFO("SetEnabled: false, result: {} ({})", magic_enum::enum_name(result), (UINT) result);
     }
 
-    if (destroy && _fgContext != nullptr)
-    {
+    if (_fgContext != nullptr)
         _fgContext = nullptr;
-    }
 
     if (shutDown || State::Instance().isShuttingDown)
         ReleaseObjects();
