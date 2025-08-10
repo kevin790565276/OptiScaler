@@ -27,12 +27,16 @@ static VkImageView biasImageView = nullptr;
 static VkImageView colorImageView = nullptr;
 static VkImageView mvImageView = nullptr;
 static VkImageView outputImageView = nullptr;
+static VkImageView fsrReactiveView = nullptr;
+static VkImageView fsrTransparencyView = nullptr;
 static NVSDK_NGX_Resource_VK depthNVRes {};
 static NVSDK_NGX_Resource_VK expNVRes {};
 static NVSDK_NGX_Resource_VK biasNVRes {};
 static NVSDK_NGX_Resource_VK colorNVRes {};
 static NVSDK_NGX_Resource_VK mvNVRes {};
 static NVSDK_NGX_Resource_VK outputNVRes {};
+static NVSDK_NGX_Resource_VK fsrReactiveNVRes {};
+static NVSDK_NGX_Resource_VK fsrTransparencyNVRes {};
 
 static VkFormat ffxApiGetVkFormat(uint32_t fmt)
 {
@@ -546,6 +550,12 @@ ffxReturnCode_t ffxDispatch_Vk(ffxContext* context, ffxDispatchDescHeader* desc)
     if (outputImageView != nullptr)
         vkDestroyImageView(_vkDevice, outputImageView, nullptr);
 
+    if (fsrReactiveView != nullptr)
+        vkDestroyImageView(_vkDevice, fsrReactiveView, nullptr);
+
+    if (fsrTransparencyView != nullptr)
+        vkDestroyImageView(_vkDevice, fsrTransparencyView, nullptr);
+
     // generate new ones with nvidia resource infos
     if (dispatchDesc->depth.resource == nullptr || !CreateIVandNVRes(dispatchDesc->depth, &depthImageView, &depthNVRes))
     {
@@ -601,13 +611,23 @@ ffxReturnCode_t ffxDispatch_Vk(ffxContext* context, ffxDispatchDescHeader* desc)
         params->Set(NVSDK_NGX_Parameter_Output, &outputNVRes);
     }
 
+    if (dispatchDesc->transparencyAndComposition.resource != nullptr &&
+        CreateIVandNVRes(dispatchDesc->transparencyAndComposition, &fsrTransparencyView, &fsrTransparencyNVRes))
+    {
+        params->Set("FSR.transparencyAndComposition", &fsrTransparencyNVRes);
+    }
+
+    if (dispatchDesc->reactive.resource != nullptr &&
+        CreateIVandNVRes(dispatchDesc->reactive, &fsrReactiveView, &fsrReactiveNVRes))
+    {
+        params->Set("FSR.reactive", &fsrReactiveNVRes);
+    }
+
     params->Set("FSR.cameraNear", dispatchDesc->cameraNear);
     params->Set("FSR.cameraFar", dispatchDesc->cameraFar);
     params->Set("FSR.cameraFovAngleVertical", dispatchDesc->cameraFovAngleVertical);
     params->Set("FSR.frameTimeDelta", dispatchDesc->frameTimeDelta);
     params->Set("FSR.viewSpaceToMetersFactor", dispatchDesc->viewSpaceToMetersFactor);
-    params->Set("FSR.transparencyAndComposition", dispatchDesc->transparencyAndComposition.resource);
-    params->Set("FSR.reactive", dispatchDesc->reactive.resource);
     params->Set(NVSDK_NGX_Parameter_Sharpness, dispatchDesc->sharpness);
 
     LOG_DEBUG("handle: {:X}, internalResolution: {}x{}", handle->Id, dispatchDesc->renderSize.width,
