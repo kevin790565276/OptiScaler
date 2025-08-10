@@ -24,8 +24,6 @@ class FSRFG_Dx12 : public virtual IFGFeature_Dx12
 
     // For copy operations
     std::map<FG_ResourceType, ID3D12Resource*> _resourceCopy[BUFFER_COUNT] {};
-    std::map<FG_ResourceType, ID3D12GraphicsCommandList*> _copyCommandList {};
-    std::map<FG_ResourceType, ID3D12CommandAllocator*> _copyCommandAllocator {};
 
     static FfxApiResourceState GetFfxApiState(D3D12_RESOURCE_STATES state)
     {

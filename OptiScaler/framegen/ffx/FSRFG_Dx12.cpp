@@ -684,19 +684,6 @@ void FSRFG_Dx12::ReleaseObjects()
         _fgCommandList = nullptr;
     }
 
-    // For each FG_ResourceType
-    for (size_t i = 0; i < 5; i++)
-    {
-        if (this->_copyCommandAllocator.contains((FG_ResourceType) i))
-            this->_copyCommandAllocator[(FG_ResourceType) i]->Release();
-
-        if (this->_copyCommandList.contains((FG_ResourceType) i))
-            this->_copyCommandList[(FG_ResourceType) i]->Release();
-    }
-
-    _copyCommandAllocator.clear();
-    _copyCommandList.clear();
-
     _mvFlip.reset();
     _depthFlip.reset();
 }
@@ -722,9 +709,9 @@ void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cm
     if (resource == nullptr)
         return;
 
-    if (cmdList == nullptr && validity == FG_ResourceValidity::ValidNow && _gameCommandQueue == nullptr)
+    if (cmdList == nullptr && validity == FG_ResourceValidity::ValidNow)
     {
-        LOG_ERROR("{}, validity == ValidNow but _gameCommandQueue is nullptr!", magic_enum::enum_name(type));
+        LOG_ERROR("{}, validity == ValidNow but cmdList is nullptr!", magic_enum::enum_name(type));
         return;
     }
 
@@ -737,27 +724,11 @@ void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cm
     fResource->resource = resource;
     fResource->width = width;
     fResource->height = height;
+    fResource->cmdList = cmdList;
 
     auto willFlip = State::Instance().activeFgInput == FGInput::Upscaler &&
                     Config::Instance()->FGResourceFlip.value_or_default() &&
                     (type == FG_ResourceType::Velocity || type == FG_ResourceType::Depth);
-
-    auto usingLocalCmdList = false;
-
-    if (cmdList == nullptr && (validity == FG_ResourceValidity::ValidNow || willFlip))
-    {
-        if (!_copyCommandAllocator.contains(type) || !_copyCommandList.contains(type))
-        {
-            LOG_ERROR("{}, _copyCommandAllocator or _copyCommandList is nullptr!", magic_enum::enum_name(type));
-            return;
-        }
-
-        auto allocator = _copyCommandAllocator[type];
-        cmdList = _copyCommandList[type];
-        allocator->Reset();
-        cmdList->Reset(allocator, nullptr);
-        usingLocalCmdList = true;
-    }
 
     // Resource flipping
     if (willFlip && _device != nullptr)
@@ -834,8 +805,11 @@ void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cm
         }
     }
 
+    fResource->validity = (validity != FG_ResourceValidity::ValidNow && !willFlip) ? FG_ResourceValidity::UntilPresent
+                                                                                   : FG_ResourceValidity::ValidNow;
+
     // Copy ValidNow & not flipped
-    if (validity == FG_ResourceValidity::ValidNow && !willFlip)
+    if (fResource->validity == FG_ResourceValidity::ValidNow)
     {
         ID3D12Resource* copyOutput = nullptr;
 
@@ -854,19 +828,14 @@ void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cm
         fResource->state = D3D12_RESOURCE_STATE_COPY_DEST;
     }
 
-    if (validity != FG_ResourceValidity::UntilPresent || willFlip)
+    if (fResource->validity == FG_ResourceValidity::UntilPresent)
+    {
+        SetResourceReady(type);
+    }
+    else
     {
         fResource->cmdList = cmdList;
         ResTrack_Dx12::SetResourceCmdList(type, cmdList);
-    }
-
-    if (validity == FG_ResourceValidity::UntilPresent && !willFlip)
-        SetResourceReady(type);
-
-    if (usingLocalCmdList)
-    {
-        cmdList->Close();
-        _gameCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList**) &cmdList);
     }
 
     LOG_TRACE("_frameResources[{}][{}]: {:X}", fIndex, magic_enum::enum_name(type), (size_t) fResource->GetResource());
@@ -920,48 +889,6 @@ void FSRFG_Dx12::CreateObjects(ID3D12Device* InDevice)
         {
             LOG_ERROR("_fgCommandList->Close: {:X}", (unsigned long) result);
             break;
-        }
-
-        // For each FG_ResourceType
-        for (size_t i = 0; i < 5; i++)
-        {
-            auto val = (FG_ResourceType) i;
-
-            ID3D12CommandAllocator* enumAllocator = nullptr;
-            ID3D12GraphicsCommandList* enumCmdList = nullptr;
-
-            // Copy
-            auto result = InDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-                                                           IID_PPV_ARGS(&this->_copyCommandAllocator[val]));
-            if (result != S_OK)
-            {
-                LOG_ERROR("CreateCommandAllocators _copyCommandAllocator[{}]: {:X}", (UINT) val,
-                          (unsigned long) result);
-                return;
-            }
-
-            this->_copyCommandAllocator[val]->SetName(std::format(L"_copyCommandAllocator[{}]", (UINT) val).c_str());
-            if (CheckForRealObject(__FUNCTION__, this->_copyCommandAllocator[val], (IUnknown**) &enumAllocator))
-                this->_copyCommandAllocator[val] = enumAllocator;
-
-            result = InDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, this->_copyCommandAllocator[val],
-                                                 NULL, IID_PPV_ARGS(&this->_copyCommandList[val]));
-            if (result != S_OK)
-            {
-                LOG_ERROR("CreateCommandList _copyCommandList[{}]: {:X}", (UINT) val, (unsigned long) result);
-                return;
-            }
-
-            this->_copyCommandList[val]->SetName(std::format(L"_copyCommandAllocator[{}]", (UINT) val).c_str());
-            if (CheckForRealObject(__FUNCTION__, this->_copyCommandList[val], (IUnknown**) &enumCmdList))
-                this->_copyCommandList[val] = enumCmdList;
-
-            result = this->_copyCommandList[val]->Close();
-            if (result != S_OK)
-            {
-                LOG_ERROR("_copyCommandList[{}]->Close: {:X}", (UINT) val, (unsigned long) result);
-                return;
-            }
         }
 
     } while (false);

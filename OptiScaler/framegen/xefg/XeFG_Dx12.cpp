@@ -434,55 +434,6 @@ bool XeFG_Dx12::Dispatch()
     XeFGProxy::EnableDebugFeature()(_swapChainContext, XEFG_SWAPCHAIN_DEBUG_FEATURE_PRESENT_FAILED_INTERPOLATION,
                                     State::Instance().FGonlyGenerated, nullptr);
 
-    uint32_t left = 0;
-    uint32_t top = 0;
-    uint32_t width = _width;
-    uint32_t height = _height;
-
-    // use swapchain buffer info
-    // DXGI_SWAP_CHAIN_DESC scDesc1 {};
-    // if (State::Instance().currentSwapchain->GetDesc(&scDesc1) == S_OK)
-    //{
-    //    LOG_DEBUG("SwapChain Res: {}x{}, Upscaler Display Res: {}x{}", scDesc1.BufferDesc.Width,
-    //              scDesc1.BufferDesc.Height, _interpolationWidth, _interpolationHeight);
-
-    //    auto calculatedLeft = ((int) scDesc1.BufferDesc.Width - (int) _interpolationWidth) / 2;
-    //    if (calculatedLeft > 0)
-    //        left = Config::Instance()->FGRectLeft.value_or(calculatedLeft);
-
-    //    auto calculatedTop = ((int) scDesc1.BufferDesc.Height - (int) _interpolationHeight) / 2;
-    //    if (calculatedTop > 0)
-    //        top = Config::Instance()->FGRectTop.value_or(calculatedTop);
-
-    //    width = Config::Instance()->FGRectWidth.value_or(_interpolationWidth);
-    //    height = Config::Instance()->FGRectHeight.value_or(_interpolationHeight);
-    //}
-    // else
-    //{
-    //    left = Config::Instance()->FGRectLeft.value_or(0);
-    //    top = Config::Instance()->FGRectTop.value_or(0);
-    //    width = Config::Instance()->FGRectWidth.value_or(_width);
-    //    height = Config::Instance()->FGRectHeight.value_or(_height);
-    //}
-
-    // uint32_t renderWidth = width;
-    // uint32_t renderHeight = height;
-
-    // LOG_DEBUG("Output Base: {}:{}, Size: {}x{}", left, top, width, height);
-
-    // xefg_swapchain_d3d12_resource_data_t backbuffer = {};
-    // backbuffer.type = XEFG_SWAPCHAIN_RES_BACKBUFFER;
-    // backbuffer.validity = XEFG_SWAPCHAIN_RV_UNTIL_NEXT_PRESENT;
-    // backbuffer.resourceBase = { left, top };
-    // backbuffer.resourceSize = { width, height };
-
-    // auto result = XeFGProxy::D3D12TagFrameResource()(_swapChainContext, nullptr, _frameCount, &backbuffer);
-    // if (result != XEFG_SWAPCHAIN_RESULT_SUCCESS)
-    //{
-    //     LOG_ERROR("D3D12TagFrameResource Backbuffer error: {} ({})", magic_enum::enum_name(result), (UINT) result);
-    //     return false;
-    // }
-
     xefg_swapchain_frame_constant_data_t constData = {};
 
     if (_cameraPosition[0] != 0.0 || _cameraPosition[1] != 0.0 || _cameraPosition[2] != 0.0)
@@ -641,8 +592,6 @@ void XeFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmd
     auto willFlip = State::Instance().activeFgInput == FGInput::Upscaler &&
                     Config::Instance()->FGResourceFlip.value_or_default() &&
                     (type == FG_ResourceType::Velocity || type == FG_ResourceType::Depth);
-
-    auto usingLocalCmdList = false;
 
     // Resource flipping
     if (willFlip && _device != nullptr)
