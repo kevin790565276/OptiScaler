@@ -2983,6 +2983,9 @@ bool MenuCommon::RenderMenu()
                         ShowHelpMarker("Delay HUDless capture, high values might cause crash!");
 
                         ImGui::SameLine(0.0f, 16.0f);
+                        ImGui::Checkbox("Compare##1", &State::Instance().FGHudlessCompare);
+
+                        ImGui::SameLine(0.0f, 16.0f);
                         if (ImGui::Button("Res##2"))
                             _showHudlessWindow = !_showHudlessWindow;
 

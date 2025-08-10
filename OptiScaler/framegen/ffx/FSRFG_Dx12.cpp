@@ -837,6 +837,26 @@ void FSRFG_Dx12::CreateObjects(ID3D12Device* InDevice)
 
 bool FSRFG_Dx12::Present()
 {
+    if (State::Instance().FGHudlessCompare && IsActive() && !IsPaused())
+    {
+        auto fIndex = GetIndex();
+
+        if (_frameResources[fIndex].contains(FG_ResourceType::HudlessColor))
+        {
+            if (_hudlessCompare.get() == nullptr)
+            {
+                _hudlessCompare = std::make_unique<HC_Dx12>("HudlessCompare", _device);
+            }
+            else
+            {
+                if (_hudlessCompare->IsInit())
+                    _hudlessCompare->Dispatch((IDXGISwapChain3*) _swapChain, _gameCommandQueue,
+                                              _frameResources[fIndex][FG_ResourceType::HudlessColor].GetResource(),
+                                              _frameResources[fIndex][FG_ResourceType::HudlessColor].state);
+            }
+        }
+    }
+
     auto result = false;
 
     if (!IsPaused() && !IsDispatched())

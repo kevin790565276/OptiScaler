@@ -564,7 +564,30 @@ void XeFG_Dx12::ReleaseObjects()
 
 void XeFG_Dx12::CreateObjects(ID3D12Device* InDevice) { _device = InDevice; }
 
-bool XeFG_Dx12::Present() { return Dispatch(); }
+bool XeFG_Dx12::Present()
+{
+    if (State::Instance().FGHudlessCompare && IsActive() && !IsPaused())
+    {
+        auto fIndex = GetIndex();
+
+        if (_frameResources[fIndex].contains(FG_ResourceType::HudlessColor))
+        {
+            if (_hudlessCompare.get() == nullptr)
+            {
+                _hudlessCompare = std::make_unique<HC_Dx12>("HudlessCompare", _device);
+            }
+            else
+            {
+                if (_hudlessCompare->IsInit())
+                    _hudlessCompare->Dispatch((IDXGISwapChain3*) _swapChain, _gameCommandQueue,
+                                              _frameResources[fIndex][FG_ResourceType::HudlessColor].GetResource(),
+                                              _frameResources[fIndex][FG_ResourceType::HudlessColor].state);
+            }
+        }
+    }
+
+    return Dispatch();
+}
 
 void XeFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* resource,
                             UINT width, UINT height, D3D12_RESOURCE_STATES state, FG_ResourceValidity validity)

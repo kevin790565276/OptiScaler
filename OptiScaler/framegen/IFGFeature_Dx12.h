@@ -5,10 +5,10 @@
 #include <upscalers/IFeature.h>
 
 #include <shaders/resource_flip/RF_Dx12.h>
+#include <shaders/hudless_compare/HC_Dx12.h>
 
 #include <dxgi1_6.h>
 #include <d3d12.h>
-#include <ffx_api_types.h>
 
 typedef struct Dx12Resource
 {
@@ -40,6 +40,7 @@ class IFGFeature_Dx12 : public virtual IFGFeature
 
     std::unique_ptr<RF_Dx12> _mvFlip;
     std::unique_ptr<RF_Dx12> _depthFlip;
+    std::unique_ptr<HC_Dx12> _hudlessCompare;
 
     bool CreateBufferResource(ID3D12Device* InDevice, ID3D12Resource* InSource, D3D12_RESOURCE_STATES InState,
                               ID3D12Resource** OutResource, bool UAV = false, bool depth = false);

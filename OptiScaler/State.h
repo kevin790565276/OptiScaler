@@ -91,6 +91,7 @@ class State
 
     // OptiFG
     bool FGonlyGenerated = false;
+    bool FGHudlessCompare = false;
     bool FGchanged = false;
     bool SCchanged = false;
     bool skipHeapCapture = false;
