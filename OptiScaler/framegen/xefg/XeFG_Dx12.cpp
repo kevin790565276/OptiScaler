@@ -599,6 +599,35 @@ void XeFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmd
         FlipResource(fResource);
     }
 
+    // We usually don't copy any resources for XeFG, the ones with this tag are the exception
+    if (cmdList != nullptr && fResource->validity == FG_ResourceValidity::ValidButMakeCopy)
+    {
+        ID3D12Resource* copyOutput = nullptr;
+
+        if (_resourceCopy[fIndex].contains(type))
+            copyOutput = _resourceCopy[fIndex][type];
+
+        if (!CopyResource(cmdList, resource, &copyOutput, state))
+        {
+            LOG_ERROR("{}, CopyResource error!", magic_enum::enum_name(type));
+            return;
+        }
+
+        _resourceCopy[fIndex][type] = copyOutput;
+        _resourceCopy[fIndex][type]->SetName(std::format(L"_resourceCopy[{}][{}]", fIndex, (UINT) type).c_str());
+        fResource->copy = copyOutput;
+        fResource->state = D3D12_RESOURCE_STATE_COPY_DEST;
+
+        fResource->validity = FG_ResourceValidity::UntilPresent;
+    }
+
+    if (type == FG_ResourceType::UIColor)
+        _noUi[fIndex] = false;
+    else if (type == FG_ResourceType::Distortion)
+        _noDistortionField[fIndex] = false;
+    else if (type == FG_ResourceType::HudlessColor)
+        _noHudless[fIndex] = false;
+
     fResource->validity = (fResource->validity != FG_ResourceValidity::ValidNow || willFlip)
                               ? FG_ResourceValidity::UntilPresent
                               : FG_ResourceValidity::ValidNow;

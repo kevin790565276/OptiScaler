@@ -28,6 +28,13 @@ typedef struct Dx12Resource
 
 class IFGFeature_Dx12 : public virtual IFGFeature
 {
+  private:
+    ID3D12GraphicsCommandList* _copyCommandList {};
+    ID3D12CommandAllocator* _copyCommandAllocator {};
+
+    bool InitCopyCmdList();
+    void DestroyCopyCmdList();
+
   protected:
     ID3D12Device* _device = nullptr;
     IDXGISwapChain* _swapChain = nullptr;
@@ -71,7 +78,7 @@ class IFGFeature_Dx12 : public virtual IFGFeature
     virtual void CreateObjects(ID3D12Device* InDevice) = 0;
 
     Dx12Resource* GetResource(FG_ResourceType type);
-    void GetResourceCopy(FG_ResourceType type, D3D12_RESOURCE_STATES bufferState, ID3D12Resource** output);
+    bool GetResourceCopy(FG_ResourceType type, D3D12_RESOURCE_STATES bufferState, ID3D12Resource* output);
 
     virtual void SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* resource,
                              UINT width, UINT height, D3D12_RESOURCE_STATES state, FG_ResourceValidity validity) = 0;
@@ -79,4 +86,5 @@ class IFGFeature_Dx12 : public virtual IFGFeature
     virtual void SetCommandQueue(FG_ResourceType type, ID3D12CommandQueue* queue) = 0;
 
     IFGFeature_Dx12() = default;
+    virtual ~IFGFeature_Dx12() { DestroyCopyCmdList(); }
 };

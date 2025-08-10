@@ -21,6 +21,7 @@ class Sl_Inputs_Dx12
     bool distortionFieldRequired = false;
 
     bool dispatched = false;
+    bool setConstantsSameFrameId = false;
 
     bool frameBasedTracking = false;
     uint32_t indexToFrameIdMapping[BUFFER_COUNT] {};
@@ -35,7 +36,7 @@ class Sl_Inputs_Dx12
     bool evaluateState(ID3D12Device* device);
     bool reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCommandList* cmdBuffer, uint32_t frameId);
     void reportEngineType(sl::EngineType type) { engineType = type; };
-    bool dispatchFG(ID3D12GraphicsCommandList* cmdBuffer);
+    bool dispatchFG();
     void markLastSendAsRequired();
 
     // A minimum of required inputs

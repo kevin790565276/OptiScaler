@@ -249,11 +249,19 @@ bool FSRFG_Dx12::Dispatch()
             LOG_DEBUG("Velocity resource: {:X}", (size_t) velocity->GetResource());
             dfgPrepare.motionVectors = ffxApiGetResourceDX12(velocity->GetResource(), GetFfxApiState(velocity->state));
         }
+        else
+        {
+            LOG_ERROR("Velocity is missing");
+        }
 
         if (depth != nullptr && IsResourceReady(FG_ResourceType::Depth))
         {
             LOG_DEBUG("Depth resource: {:X}", (size_t) depth->GetResource());
             dfgPrepare.depth = ffxApiGetResourceDX12(depth->GetResource(), GetFfxApiState(depth->state));
+        }
+        else
+        {
+            LOG_ERROR("Depth is missing");
         }
 
         if (State::Instance().currentFeature && State::Instance().activeFgInput == FGInput::Upscaler)
@@ -740,6 +748,17 @@ void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cm
     {
         FlipResource(fResource);
     }
+
+    if (type == FG_ResourceType::UIColor)
+        _noUi[fIndex] = false;
+    else if (type == FG_ResourceType::Distortion)
+        _noDistortionField[fIndex] = false;
+    else if (type == FG_ResourceType::HudlessColor)
+        _noHudless[fIndex] = false;
+
+    // For FSR FG we always copy ValidNow
+    if (fResource->validity == FG_ResourceValidity::ValidButMakeCopy)
+        fResource->validity = FG_ResourceValidity::ValidNow;
 
     fResource->validity = (fResource->validity != FG_ResourceValidity::ValidNow || willFlip)
                               ? FG_ResourceValidity::UntilPresent

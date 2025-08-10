@@ -5,29 +5,32 @@
 
 #include <magic_enum.hpp>
 
-void IFGFeature_Dx12::GetResourceCopy(FG_ResourceType type, D3D12_RESOURCE_STATES bufferState, ID3D12Resource** output)
+bool IFGFeature_Dx12::GetResourceCopy(FG_ResourceType type, D3D12_RESOURCE_STATES bufferState, ID3D12Resource* output)
 {
-    // if (!_commandAllocators[BUFFER_COUNT] || !_commandList[BUFFER_COUNT])
-    //     return;
+    if (!InitCopyCmdList())
+        return false;
 
-    // auto allocator = _commandAllocators[BUFFER_COUNT];
-    // auto result = allocator->Reset();
-    // if (result != S_OK)
-    //     return;
+    auto resource = GetResource(type);
 
-    // result = _commandList[BUFFER_COUNT]->Reset(allocator, nullptr);
-    // if (result != S_OK)
-    //     return;
+    // TODO: add some warning
+    if (resource->copy == nullptr)
+        return false;
 
-    //// if (bufferState == D3D12_RESOURCE_STATE_PRESENT)
-    ////{
-    //// }
+    auto result = _copyCommandAllocator->Reset();
+    if (result != S_OK)
+        return false;
 
-    //_commandList[BUFFER_COUNT]->CopyResource(buffer, _paramHudless[GetIndex()].resource);
+    result = _copyCommandList->Reset(_copyCommandAllocator, nullptr);
+    if (result != S_OK)
+        return false;
 
-    //_commandList[BUFFER_COUNT]->Close();
-    // ID3D12CommandList* commandList = _commandList[BUFFER_COUNT];
-    //_gameCommandQueue->ExecuteCommandLists(1, &commandList);
+    _copyCommandList->CopyResource(output, resource->copy);
+
+    _copyCommandList->Close();
+    ID3D12CommandList* commandList = _copyCommandList;
+    _gameCommandQueue->ExecuteCommandLists(1, &commandList);
+
+    return true;
 }
 
 Dx12Resource* IFGFeature_Dx12::GetResource(FG_ResourceType type)
@@ -163,6 +166,67 @@ bool IFGFeature_Dx12::CreateBufferResourceWithSize(ID3D12Device* device, ID3D12R
     return true;
 }
 
+bool IFGFeature_Dx12::InitCopyCmdList()
+{
+    if (_copyCommandList != nullptr && _copyCommandAllocator != nullptr)
+        return true;
+
+    if (_device == nullptr)
+        return false;
+
+    if (_copyCommandList == nullptr || _copyCommandAllocator == nullptr)
+        DestroyCopyCmdList();
+
+    ID3D12CommandAllocator* allocator = nullptr;
+    ID3D12GraphicsCommandList* cmdList = nullptr;
+
+    auto result = _device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&_copyCommandAllocator));
+    if (result != S_OK)
+    {
+        LOG_ERROR("_copyCommandAllocator: {:X}", (unsigned long) result);
+        return false;
+    }
+
+    _copyCommandAllocator->SetName(L"_copyCommandAllocator");
+    if (CheckForRealObject(__FUNCTION__, _copyCommandAllocator, (IUnknown**) &allocator))
+        _copyCommandAllocator = allocator;
+
+    result = _device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, _copyCommandAllocator, NULL,
+                                        IID_PPV_ARGS(&_copyCommandList));
+    if (result != S_OK)
+    {
+        LOG_ERROR("_copyCommandAllocator: {:X}", (unsigned long) result);
+        return false;
+    }
+    _copyCommandList->SetName(L"_copyCommandList");
+    if (CheckForRealObject(__FUNCTION__, _copyCommandList, (IUnknown**) &cmdList))
+        _copyCommandList = cmdList;
+
+    result = _copyCommandList->Close();
+    if (result != S_OK)
+    {
+        LOG_ERROR("_copyCommandList->Close: {:X}", (unsigned long) result);
+        return false;
+    }
+
+    return true;
+}
+
+void IFGFeature_Dx12::DestroyCopyCmdList()
+{
+    if (_copyCommandAllocator != nullptr)
+    {
+        _copyCommandAllocator->Release();
+        _copyCommandAllocator = nullptr;
+    }
+
+    if (_copyCommandList != nullptr)
+    {
+        _copyCommandList->Release();
+        _copyCommandList = nullptr;
+    }
+}
+
 bool IFGFeature_Dx12::CreateBufferResource(ID3D12Device* device, ID3D12Resource* source,
                                            D3D12_RESOURCE_STATES initialState, ID3D12Resource** target, bool UAV,
                                            bool depth)
@@ -180,21 +244,21 @@ bool IFGFeature_Dx12::CreateBufferResource(ID3D12Device* device, ID3D12Resource*
 
     if (*target != nullptr)
     {
-        (*target)->Release();
-        (*target) = nullptr;
+        //(*target)->Release();
+        //(*target) = nullptr;
 
-        // auto bufDesc = (*target)->GetDesc();
+        auto bufDesc = (*target)->GetDesc();
 
-        // if (bufDesc.Width != inDesc.Width || bufDesc.Height != inDesc.Height || bufDesc.Format != inDesc.Format ||
-        //     bufDesc.Flags != inDesc.Flags)
-        //{
-        //     (*target)->Release();
-        //     (*target) = nullptr;
-        // }
-        // else
-        //{
-        //     return true;
-        // }
+        if (bufDesc.Width != inDesc.Width || bufDesc.Height != inDesc.Height || bufDesc.Format != inDesc.Format ||
+            bufDesc.Flags != inDesc.Flags)
+        {
+            (*target)->Release();
+            (*target) = nullptr;
+        }
+        else
+        {
+            return true;
+        }
     }
 
     D3D12_HEAP_PROPERTIES heapProperties;
