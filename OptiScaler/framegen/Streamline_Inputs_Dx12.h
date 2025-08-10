@@ -26,6 +26,9 @@ class Sl_Inputs_Dx12
     bool frameBasedTracking = false;
     uint32_t indexToFrameIdMapping[BUFFER_COUNT] {};
 
+    uint32_t mvsWidth = 0;
+    uint32_t mvsHeight = 0;
+
     uint32_t interpolationWidth = 0;
     uint32_t interpolationHeight = 0;
 

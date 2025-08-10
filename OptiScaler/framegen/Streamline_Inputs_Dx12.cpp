@@ -217,6 +217,9 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         mvsSent = true;
 
+        mvsWidth = tag.extent.width;
+        mvsHeight = tag.extent.height;
+
         // ResTrack_Dx12::SetMVsCmdList(cmdBuffer);
 
         auto mvResource = (ID3D12Resource*) tag.resource->native;
@@ -366,7 +369,12 @@ bool Sl_Inputs_Dx12::dispatchFG()
     // bool multiplyByResolution = dataCopy.mvecScale.x != 1.f || dataCopy.mvecScale.y
     // != 1.f;
     bool multiplyByResolution = true;
-    fgOutput->SetMVScale(slConstsRef.mvecScale.x, slConstsRef.mvecScale.y, multiplyByResolution);
+    if (multiplyByResolution)
+    {
+        slConstsRef.mvecScale.x *= mvsWidth;
+        slConstsRef.mvecScale.y *= mvsHeight;
+    }
+    fgOutput->SetMVScale(slConstsRef.mvecScale.x, slConstsRef.mvecScale.y);
 
     fgOutput->SetCameraData(
         reinterpret_cast<float*>(&slConstsRef.cameraPos), reinterpret_cast<float*>(&slConstsRef.cameraUp),

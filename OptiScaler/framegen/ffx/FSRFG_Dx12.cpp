@@ -270,17 +270,8 @@ bool FSRFG_Dx12::Dispatch()
         else
             dfgPrepare.renderSize = { dfgPrepare.depth.description.width, dfgPrepare.depth.description.height };
 
-        if (_mvScaleMultiplyByResolution)
-        {
-            dfgPrepare.motionVectorScale.x = _mvScaleX * dfgPrepare.renderSize.width;
-            dfgPrepare.motionVectorScale.y = _mvScaleY * dfgPrepare.renderSize.height;
-        }
-        else
-        {
-            dfgPrepare.motionVectorScale.x = _mvScaleX;
-            dfgPrepare.motionVectorScale.y = _mvScaleY;
-        }
-
+        dfgPrepare.motionVectorScale.x = _mvScaleX;
+        dfgPrepare.motionVectorScale.y = _mvScaleY;
         dfgPrepare.cameraFar = _cameraFar;
         dfgPrepare.cameraNear = _cameraNear;
         dfgPrepare.cameraFovAngleVertical = _cameraVFov;

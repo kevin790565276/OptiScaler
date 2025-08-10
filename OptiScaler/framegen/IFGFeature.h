@@ -50,7 +50,6 @@ class IFGFeature
     float _jitterY = 0.0;
     float _mvScaleX = 0.0;
     float _mvScaleY = 0.0;
-    bool _mvScaleMultiplyByResolution = false;
     float _cameraNear = 0.0;
     float _cameraFar = 0.0;
     float _cameraVFov = 0.0;
@@ -110,7 +109,7 @@ class IFGFeature
     bool IsDispatched();
 
     void SetJitter(float x, float y);
-    void SetMVScale(float x, float y, bool multiplyByResolution = false);
+    void SetMVScale(float x, float y);
     void SetCameraValues(float nearValue, float farValue, float vFov, float aspectRatio, float meterFactor = 0.0f);
     void SetCameraData(float cameraPosition[3], float cameraUp[3], float cameraRight[3], float cameraForward[3]);
     void SetFrameTimeDelta(float delta);

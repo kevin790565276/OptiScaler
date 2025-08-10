@@ -66,11 +66,10 @@ void IFGFeature::SetJitter(float x, float y)
     _jitterY = y;
 }
 
-void IFGFeature::SetMVScale(float x, float y, bool multiplyByResolution)
+void IFGFeature::SetMVScale(float x, float y)
 {
     _mvScaleX = x;
     _mvScaleY = y;
-    _mvScaleMultiplyByResolution = multiplyByResolution;
 }
 
 void IFGFeature::SetCameraValues(float nearValue, float farValue, float vFov, float aspectRatio, float meterFactor)
