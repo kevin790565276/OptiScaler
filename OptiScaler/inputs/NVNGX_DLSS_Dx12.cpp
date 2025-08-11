@@ -1526,22 +1526,29 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D12_EvaluateFeature(ID3D12GraphicsCom
     float mvScaleY = 0.0f;
 
     {
-        if (!Config::Instance()->FsrUseFsrInputValues.value_or_default() ||
-            InParameters->Get("FSR.cameraNear", &cameraNear) != NVSDK_NGX_Result_Success)
-        {
-            if (deviceContext->feature->DepthInverted())
-                cameraFar = Config::Instance()->FsrCameraNear.value_or_default();
-            else
-                cameraNear = Config::Instance()->FsrCameraNear.value_or_default();
-        }
+        float tempCameraNear = 0.0f;
+        float tempCameraFar = 0.0f;
+        InParameters->Get("FSR.cameraNear", &tempCameraNear);
+        InParameters->Get("FSR.cameraFar", &tempCameraFar);
 
         if (!Config::Instance()->FsrUseFsrInputValues.value_or_default() ||
-            InParameters->Get("FSR.cameraFar", &cameraFar) != NVSDK_NGX_Result_Success)
+            (tempCameraNear == 0.0f && tempCameraFar == 0.0f))
         {
             if (deviceContext->feature->DepthInverted())
+            {
+                cameraFar = Config::Instance()->FsrCameraNear.value_or_default();
                 cameraNear = Config::Instance()->FsrCameraFar.value_or_default();
+            }
             else
+            {
                 cameraFar = Config::Instance()->FsrCameraFar.value_or_default();
+                cameraNear = Config::Instance()->FsrCameraNear.value_or_default();
+            }
+        }
+        else
+        {
+            cameraNear = tempCameraNear;
+            cameraFar = tempCameraFar;
         }
 
         if (!Config::Instance()->FsrUseFsrInputValues.value_or_default() ||
