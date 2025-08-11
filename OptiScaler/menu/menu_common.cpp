@@ -2630,7 +2630,8 @@ bool MenuCommon::RenderMenu()
                     State::Instance().activeFgOutput == FGOutput::XeFG)
                 {
                     ImGui::Checkbox("Show Detected UI", &State::Instance().FGHudlessCompare);
-                    ShowHelpMarker("Needs hudless texture to compare with final image!");
+                    ShowHelpMarker("Needs hudless texture to compare with final image.\n"
+                                   "UI elements and ONLY UI elements should have a pink tint!");
                 }
 
                 // if (State::Instance().activeFgInput != Config::Instance()->FGInput.value_or_default())
