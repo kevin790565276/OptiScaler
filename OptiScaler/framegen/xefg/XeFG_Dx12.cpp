@@ -519,7 +519,6 @@ void XeFG_Dx12::EvaluateState(ID3D12Device* device, FG_Constants& fgConstants)
     {
         CreateObjects(device);
         CreateContext(device, fgConstants);
-        ResetCounters();
         UpdateTarget();
     }
     else if ((!Config::Instance()->FGEnabled.value_or_default() || State::Instance().FGchanged) && IsActive())
@@ -536,7 +535,6 @@ void XeFG_Dx12::EvaluateState(ID3D12Device* device, FG_Constants& fgConstants)
     if (State::Instance().FGchanged)
     {
         LOG_DEBUG("(FG) Frame generation paused");
-        ResetCounters();
         UpdateTarget();
 
         if (State::Instance().activeFgInput == FGInput::Upscaler)
