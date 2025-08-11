@@ -1174,7 +1174,7 @@ void MenuCommon::PopulateCombo(std::string name, CustomOptional<uint32_t, B>* va
 
         for (int n = 1; n < length; n++)
         {
-            if (disabledMask[n])
+            if (disabledMask && disabledMask[n])
                 ImGui::BeginDisabled();
 
             if (ImGui::Selectable(names[n], selected == n))
@@ -1186,7 +1186,7 @@ void MenuCommon::PopulateCombo(std::string name, CustomOptional<uint32_t, B>* va
             if (!desc[n].empty())
                 ShowTooltip(desc[n].c_str());
 
-            if (disabledMask[n])
+            if (disabledMask && disabledMask[n])
                 ImGui::EndDisabled();
         }
 

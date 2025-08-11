@@ -218,8 +218,8 @@ HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::Present(UINT SyncInterval, UIN
         result = RenderTrig(m_pReal, SyncInterval, Flags, nullptr, Device, Handle, UWP);
 
         // When Reflex can't be used to limit, sleep in present
-        if (!State::Instance().reflexLimitsFps)
-            FrameLimit::sleep();
+        if (!State::Instance().reflexLimitsFps && State::Instance().activeFgOutput == FGOutput::NoFG)
+            FrameLimit::sleep(false);
     }
     else
     {
@@ -481,9 +481,17 @@ HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::Present1(UINT SyncInterval, UI
     HRESULT result;
 
     if (!(Flags & DXGI_PRESENT_TEST || Flags & DXGI_PRESENT_RESTART) && RenderTrig != nullptr)
+    {
         result = RenderTrig(m_pReal1, SyncInterval, Flags, pPresentParameters, Device, Handle, UWP);
+
+        // When Reflex can't be used to limit, sleep in present
+        if (!State::Instance().reflexLimitsFps && State::Instance().activeFgOutput == FGOutput::NoFG)
+            FrameLimit::sleep(false);
+    }
     else
+    {
         result = m_pReal1->Present1(SyncInterval, Flags, pPresentParameters);
+    }
 
     return result;
 }

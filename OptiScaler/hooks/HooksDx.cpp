@@ -25,6 +25,7 @@
 #include <ffx_framegeneration.h>
 
 #include <d3d11on12.h>
+#include <misc/FrameLimit.h>
 
 #pragma intrinsic(_ReturnAddress)
 
@@ -308,6 +309,9 @@ static HRESULT hkFGPresent(void* This, UINT SyncInterval, UINT Flags)
     LOG_DEBUG("Result: {:X}", result);
 
     Hudfix_Dx12::PresentEnd();
+
+    if (!State::Instance().reflexLimitsFps && State::Instance().activeFgOutput != FGOutput::NoFG)
+        FrameLimit::sleep(fg != nullptr ? fg->IsActive() : false);
 
     if (mutexUsed && fg != nullptr)
     {
