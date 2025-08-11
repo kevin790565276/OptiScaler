@@ -2626,6 +2626,13 @@ bool MenuCommon::RenderMenu()
                     fgInputOverridden = false;
                 }
 
+                if (State::Instance().activeFgOutput == FGOutput::FSRFG ||
+                    State::Instance().activeFgOutput == FGOutput::XeFG)
+                {
+                    ImGui::Checkbox("Show Detected UI", &State::Instance().FGHudlessCompare);
+                    ShowHelpMarker("Needs hudless texture to compare with final image!");
+                }
+
                 // if (State::Instance().activeFgInput != Config::Instance()->FGInput.value_or_default())
                 //{
                 //     State::Instance().activeFgInput = Config::Instance()->FGInput.value_or_default();
@@ -2981,9 +2988,6 @@ bool MenuCommon::RenderMenu()
                             LOG_DEBUG("Enabled set FGHUDLimit: {}", hudFixLimit);
                         }
                         ShowHelpMarker("Delay HUDless capture, high values might cause crash!");
-
-                        ImGui::SameLine(0.0f, 16.0f);
-                        ImGui::Checkbox("Compare##1", &State::Instance().FGHudlessCompare);
 
                         ImGui::SameLine(0.0f, 16.0f);
                         if (ImGui::Button("Res##2"))
