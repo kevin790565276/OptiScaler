@@ -54,15 +54,10 @@ void fakenvapi::reportFGPresent(IDXGISwapChain* pSwapChain, bool fg_state, bool 
         constexpr feature_version requiredVersion = { 3, 1, 1 };
         if (ffxApiVersion >= requiredVersion && updateModeAndContext())
         {
-            static void* last_context = nullptr;
             antilag2_data.enabled = _lowLatencyContext != nullptr && _lowLatencyMode == Mode::AntiLag2;
             antilag2_data.context = antilag2_data.enabled ? _lowLatencyContext : nullptr;
 
-            if (last_context != antilag2_data.context)
-            {
-                last_context = antilag2_data.context;
-                pSwapChain->SetPrivateData(IID_IFfxAntiLag2Data, sizeof(antilag2_data), &antilag2_data);
-            }
+            pSwapChain->SetPrivateData(IID_IFfxAntiLag2Data, sizeof(antilag2_data), &antilag2_data);
         }
         else
         {
