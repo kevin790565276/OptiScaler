@@ -658,10 +658,16 @@ void XeFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmd
 
     xefg_swapchain_d3d12_resource_data_t resourceParam = GetResourceData(type);
 
+    // HACK: XeFG docs lie and cmd list is technically required as it checks for it
+    // But it doesn't seem to use it when the validity is UNTIL_NEXT_PRESENT
+    if (cmdList == nullptr && resourceParam.validity == XEFG_SWAPCHAIN_RV_UNTIL_NEXT_PRESENT)
+        cmdList = (ID3D12GraphicsCommandList*) 1;
+
     auto result = XeFGProxy::D3D12TagFrameResource()(_swapChainContext, cmdList, _frameCount, &resourceParam);
     if (result != XEFG_SWAPCHAIN_RESULT_SUCCESS)
     {
-        LOG_ERROR("D3D12TagFrameResource Depth error: {} ({})", magic_enum::enum_name(result), (UINT) result);
+        LOG_ERROR("D3D12TagFrameResource {} error: {} ({})", magic_enum::enum_name(type), magic_enum::enum_name(result),
+                  (UINT) result);
         return;
     }
 

@@ -38,6 +38,7 @@ class StreamlineHooks
 
   private:
     static sl::RenderAPI renderApi;
+    static std::mutex setConstantsMutex;
 
     // Interposer
     static decltype(&slInit) o_slInit;

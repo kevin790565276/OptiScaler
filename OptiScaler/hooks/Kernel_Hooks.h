@@ -621,7 +621,7 @@ class KernelHooks
         // Try to catch something like this:
         // C:\ProgramData/NVIDIA/NGX/models/sl_dlss_0/versions/133120/files/190_E658703.dll
         if (CheckDllNameW(&lcaseLibName, &slDlssNamesW) ||
-            (lcaseLibName.contains(L"/versions/") && lcaseLibName.contains(L"/sl_dlss_")))
+            (lcaseLibName.contains(L"/versions/") && lcaseLibName.contains(L"/sl_dlss_0")))
         {
             auto dlssModule = KernelBaseProxy::LoadLibraryExW_()(lpLibFullPath, NULL, 0);
 

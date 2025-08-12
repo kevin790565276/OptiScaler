@@ -1820,7 +1820,7 @@ void ResTrack_Dx12::HookDevice(ID3D12Device* device)
     o_CopyDescriptorsSimple = (PFN_CopyDescriptorsSimple) pVTable[24];
 
     // Apply the detour
-    if (o_CreateDescriptorHeap != nullptr)
+    if (o_CreateDescriptorHeap != nullptr && State::Instance().activeFgInput == FGInput::Upscaler)
     {
         DetourTransactionBegin();
         DetourUpdateThread(GetCurrentThread());

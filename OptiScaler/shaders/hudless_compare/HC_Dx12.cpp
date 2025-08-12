@@ -318,7 +318,7 @@ bool HC_Dx12::Dispatch(IDXGISwapChain3* sc, ID3D12CommandQueue* queue, ID3D12Res
     // Check Hudless Buffer
     D3D12_RESOURCE_DESC hudlessDesc = hudless->GetDesc();
 
-    if (hudlessDesc.Format != scDesc.BufferDesc.Format || hudlessDesc.Width != scDesc.BufferDesc.Width ||
+    if (/*hudlessDesc.Format != scDesc.BufferDesc.Format ||*/ hudlessDesc.Width != scDesc.BufferDesc.Width ||
         hudlessDesc.Height != scDesc.BufferDesc.Height)
     {
         return false;

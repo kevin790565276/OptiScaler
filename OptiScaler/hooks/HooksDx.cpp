@@ -217,8 +217,6 @@ static HRESULT hkFGPresent(void* This, UINT SyncInterval, UINT Flags)
         LOG_DEBUG("_frameCounter: {}, flags: {:X}, Frametime: {}", _frameCounter, Flags, ftDelta);
     }
 
-    IFGFeature_Dx12* fg = State::Instance().currentFG;
-
     if (willPresent)
     {
         if (State::Instance().activeFgInput == FGInput::Upscaler && HooksDx::dx12UpscaleTrig &&
@@ -257,11 +255,14 @@ static HRESULT hkFGPresent(void* This, UINT SyncInterval, UINT Flags)
             HooksDx::readbackBuffer->Unmap(0, nullptr);
             HooksDx::dx12UpscaleTrig = false;
         }
+
+        if (State::Instance().slFGInputs.readyForDispatch() && !State::Instance().slFGInputs.dispatchFG())
+            LOG_DEBUG("Streamline FG was not dispatched");
+
+        State::Instance().slFGInputs.markLastSendAsRequired();
     }
 
-    if (State::Instance().slFGInputs.readyForDispatch())
-        State::Instance().slFGInputs.dispatchFG();
-
+    IFGFeature_Dx12* fg = State::Instance().currentFG;
     bool mutexUsed = false;
     if (willPresent && fg != nullptr && fg->IsActive() &&
         Config::Instance()->FGUseMutexForSwapchain.value_or_default() && fg->Mutex.getOwner() != 2)
@@ -276,14 +277,6 @@ static HRESULT hkFGPresent(void* This, UINT SyncInterval, UINT Flags)
     {
         fg->Present();
     }
-
-    State::Instance().slFGInputs.markLastSendAsRequired();
-
-    // if (willPresent && State::Instance().activeFgInput == FGInput::DLSSG &&
-    //     State::Instance().slFGInputs.readyForDispatch() && fg != nullptr)
-    //{
-    //     State::Instance().slFGInputs.dispatchFG(nullptr);
-    // }
 
     if (willPresent)
     {
@@ -310,7 +303,7 @@ static HRESULT hkFGPresent(void* This, UINT SyncInterval, UINT Flags)
 
     Hudfix_Dx12::PresentEnd();
 
-    if (!State::Instance().reflexLimitsFps && State::Instance().activeFgOutput != FGOutput::NoFG)
+    if (willPresent && !State::Instance().reflexLimitsFps && State::Instance().activeFgOutput != FGOutput::NoFG)
         FrameLimit::sleep(fg != nullptr ? fg->IsActive() : false);
 
     if (mutexUsed && fg != nullptr)

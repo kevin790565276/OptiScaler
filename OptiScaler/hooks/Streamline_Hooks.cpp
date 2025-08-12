@@ -13,6 +13,7 @@
 #include "include/sl.param/parameters.h"
 
 sl::RenderAPI StreamlineHooks::renderApi = sl::RenderAPI::eCount;
+std::mutex StreamlineHooks::setConstantsMutex {};
 
 // interposer
 decltype(&slInit) StreamlineHooks::o_slInit = nullptr;
@@ -128,7 +129,7 @@ sl::Result StreamlineHooks::hkslSetTag(sl::ViewportHandle& viewport, sl::Resourc
 
     for (uint32_t i = 0; i < numTags; i++)
     {
-        if (tags[i].resource == nullptr)
+        if (tags[i].resource == nullptr || tags[i].resource->native == nullptr)
         {
             LOG_TRACE("Resource of type: {} is null, continuing", tags[i].type);
             continue;
@@ -414,9 +415,8 @@ bool StreamlineHooks::hkdlssg_slOnPluginLoad(void* params, const char* loaderJSO
 sl::Result StreamlineHooks::hkslSetConstants(const sl::Constants& values, const sl::FrameToken& frame,
                                              const sl::ViewportHandle& viewport)
 {
-    unsigned int frameIndex = frame;
-
-    LOG_TRACE("called with frameIndex: {}", frameIndex);
+    std::scoped_lock lock(setConstantsMutex);
+    LOG_TRACE("called with frameIndex: {}, viewport: {}", (unsigned int) frame, (unsigned int) viewport);
 
     State::Instance().slFGInputs.setConstants(values, (uint32_t) frame);
 
@@ -426,7 +426,24 @@ sl::Result StreamlineHooks::hkslSetConstants(const sl::Constants& values, const 
 bool StreamlineHooks::hkcommon_slOnPluginLoad(void* params, const char* loaderJSON, const char** pluginJSON)
 {
     LOG_FUNC();
+
+    // TODO: do it better than "static" and hoping for the best
+    static std::string config;
+
     auto result = o_common_slOnPluginLoad(params, loaderJSON, pluginJSON);
+
+    // Completely disables Streamline hooks
+    // if (true)
+    //{
+    //    nlohmann::json configJson = nlohmann::json::parse(*pluginJSON);
+
+    //    configJson["hooks"].clear();
+    //    configJson["exclusive_hooks"].clear();
+
+    //    config = configJson.dump();
+
+    //    *pluginJSON = config.c_str();
+    //}
 
     if (Config::Instance()->StreamlineSpoofing.value_or_default())
         setSystemCapsArch((sl::param::IParameters*) params, UINT_MAX);

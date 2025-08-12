@@ -21,10 +21,13 @@ bool Sl_Inputs_Dx12::setConstants(const sl::Constants& values, uint32_t frameId)
 
     LOG_DEBUG("Setting consts for streamline index: {}", index);
 
-    // Streamline logs already log this
+    // Streamline already log this error, keep using the previous data
     static uint32_t lastFrameId = UINT32_MAX;
-    setConstantsSameFrameId = lastFrameId == frameId;
-    lastFrameId = frameId;
+    if (lastFrameId == frameId)
+    {
+        lastFrameId = frameId;
+        return false;
+    }
 
     data = sl::Constants {};
 
@@ -147,8 +150,7 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
         return true;
     }
 
-    // TODO: detect if there are multiple calls to hkslSetConstants with the same ID, DRG crashing, sl sees an error
-    if (dispatched && !setConstantsSameFrameId)
+    if (dispatched)
     {
         fgOutput->StartNewFrame();
 
@@ -167,23 +169,32 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         hudlessSent = true;
 
-        // ResTrack_Dx12::SetHudlessCmdList(cmdBuffer);
-
         auto hudlessResource = (ID3D12Resource*) tag.resource->native;
 
         auto validity =
             (tag.lifecycle != sl::eOnlyValidNow) ? FG_ResourceValidity::UntilPresent : FG_ResourceValidity::ValidNow;
 
         // We need to make sure we have a copy of hudless that WE can use
-        if (cmdBuffer != nullptr && validity == FG_ResourceValidity::ValidNow)
-            validity = FG_ResourceValidity::ValidButMakeCopy;
+        // TODO: bugged and copy crashes
+        // if (cmdBuffer != nullptr && validity == FG_ResourceValidity::ValidNow)
+        //    validity = FG_ResourceValidity::ValidButMakeCopy;
 
-        fgOutput->SetResource(FG_ResourceType::HudlessColor, cmdBuffer, hudlessResource, tag.extent.width,
-                              tag.extent.height, (D3D12_RESOURCE_STATES) tag.resource->state, validity);
+        auto width = tag.extent.width;
+        auto height = tag.extent.height;
+
+        if (!tag.extent)
+        {
+            const auto desc = hudlessResource->GetDesc();
+            width = desc.Width;
+            height = desc.Height;
+        }
+
+        fgOutput->SetResource(FG_ResourceType::HudlessColor, cmdBuffer, hudlessResource, width, height,
+                              (D3D12_RESOURCE_STATES) tag.resource->state, validity);
 
         // Assume hudless is the size used for interpolation
-        interpolationWidth = tag.extent.width;
-        interpolationHeight = tag.extent.height;
+        interpolationWidth = width;
+        interpolationHeight = height;
 
         auto static lastFormat = DXGI_FORMAT_UNKNOWN;
         auto format = hudlessResource->GetDesc().Format;
@@ -206,9 +217,20 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         auto depthResource = (ID3D12Resource*) tag.resource->native;
 
+        auto width = tag.extent.width;
+        auto height = tag.extent.height;
+
+        if (!tag.extent)
+        {
+            const auto desc = depthResource->GetDesc();
+            width = desc.Width;
+            height = desc.Height;
+        }
+
         const auto validity =
             (tag.lifecycle != sl::eOnlyValidNow) ? FG_ResourceValidity::UntilPresent : FG_ResourceValidity::ValidNow;
-        fgOutput->SetResource(FG_ResourceType::Depth, cmdBuffer, depthResource, tag.extent.width, tag.extent.height,
+
+        fgOutput->SetResource(FG_ResourceType::Depth, cmdBuffer, depthResource, width, height,
                               (D3D12_RESOURCE_STATES) tag.resource->state, validity);
     }
     else if (tag.type == sl::kBufferTypeMotionVectors)
@@ -217,16 +239,25 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         mvsSent = true;
 
-        mvsWidth = tag.extent.width;
-        mvsHeight = tag.extent.height;
-
-        // ResTrack_Dx12::SetMVsCmdList(cmdBuffer);
-
         auto mvResource = (ID3D12Resource*) tag.resource->native;
+
+        auto width = tag.extent.width;
+        auto height = tag.extent.height;
+
+        if (!tag.extent)
+        {
+            const auto desc = mvResource->GetDesc();
+            width = desc.Width;
+            height = desc.Height;
+        }
+
+        mvsWidth = width;
+        mvsHeight = height;
 
         const auto validity =
             (tag.lifecycle != sl::eOnlyValidNow) ? FG_ResourceValidity::UntilPresent : FG_ResourceValidity::ValidNow;
-        fgOutput->SetResource(FG_ResourceType::Velocity, cmdBuffer, mvResource, tag.extent.width, tag.extent.height,
+
+        fgOutput->SetResource(FG_ResourceType::Velocity, cmdBuffer, mvResource, width, height,
                               (D3D12_RESOURCE_STATES) tag.resource->state, validity);
     }
     else if (tag.type == sl::kBufferTypeUIColorAndAlpha)
@@ -237,13 +268,22 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         if (uiRequired)
         {
-            // ResTrack_Dx12::SetUICmdList(cmdBuffer);
-
             auto uiResource = (ID3D12Resource*) tag.resource->native;
+
+            auto width = tag.extent.width;
+            auto height = tag.extent.height;
+
+            if (!tag.extent)
+            {
+                const auto desc = uiResource->GetDesc();
+                width = desc.Width;
+                height = desc.Height;
+            }
 
             const auto validity = (tag.lifecycle != sl::eOnlyValidNow) ? FG_ResourceValidity::UntilPresent
                                                                        : FG_ResourceValidity::ValidNow;
-            fgOutput->SetResource(FG_ResourceType::UIColor, cmdBuffer, uiResource, tag.extent.width, tag.extent.height,
+
+            fgOutput->SetResource(FG_ResourceType::UIColor, cmdBuffer, uiResource, width, height,
                                   (D3D12_RESOURCE_STATES) tag.resource->state, validity);
         }
     }
@@ -253,14 +293,23 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         distortionFieldSent = true;
 
-        // ResTrack_Dx12::SetDistortionFieldCmdList(cmdBuffer);
-
         auto distortionFieldResource = (ID3D12Resource*) tag.resource->native;
+
+        auto width = tag.extent.width;
+        auto height = tag.extent.height;
+
+        if (!tag.extent)
+        {
+            const auto desc = distortionFieldResource->GetDesc();
+            width = desc.Width;
+            height = desc.Height;
+        }
 
         const auto validity =
             (tag.lifecycle != sl::eOnlyValidNow) ? FG_ResourceValidity::UntilPresent : FG_ResourceValidity::ValidNow;
-        fgOutput->SetResource(FG_ResourceType::Distortion, cmdBuffer, distortionFieldResource, tag.extent.width,
-                              tag.extent.height, (D3D12_RESOURCE_STATES) tag.resource->state, validity);
+
+        fgOutput->SetResource(FG_ResourceType::Distortion, cmdBuffer, distortionFieldResource, width, height,
+                              (D3D12_RESOURCE_STATES) tag.resource->state, validity);
     }
 
     return true;
@@ -366,8 +415,7 @@ bool Sl_Inputs_Dx12::dispatchFG()
 
     // Streamline is not 100% clear on if we should multiply by resolution or not.
     // But UE games and Dead Rising expect that multiplication to be done, even if the scale is 1.0.
-    // bool multiplyByResolution = dataCopy.mvecScale.x != 1.f || dataCopy.mvecScale.y
-    // != 1.f;
+    // bool multiplyByResolution = dataCopy.mvecScale.x != 1.f || dataCopy.mvecScale.y != 1.f;
     bool multiplyByResolution = true;
     if (multiplyByResolution)
     {

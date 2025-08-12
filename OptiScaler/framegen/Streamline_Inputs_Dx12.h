@@ -12,6 +12,7 @@ class Sl_Inputs_Dx12
     std::optional<sl::Constants> slConstants[BUFFER_COUNT] {};
     sl::EngineType engineType = sl::EngineType::eCount;
 
+    // TODO: make "sent" map/array
     bool depthSent = false;
     bool hudlessSent = false;
     bool mvsSent = false;
@@ -21,7 +22,6 @@ class Sl_Inputs_Dx12
     bool distortionFieldRequired = false;
 
     bool dispatched = false;
-    bool setConstantsSameFrameId = false;
 
     bool frameBasedTracking = false;
     uint32_t indexToFrameIdMapping[BUFFER_COUNT] {};
