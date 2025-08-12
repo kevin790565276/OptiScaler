@@ -16,11 +16,6 @@ bool Sl_Inputs_Dx12::setConstants(const sl::Constants& values, uint32_t frameId)
     if (fgOutput == nullptr)
         return false;
 
-    auto index = frameBasedTracking ? frameId % BUFFER_COUNT : 0;
-    auto& data = slConstants[index];
-
-    LOG_DEBUG("Setting consts for streamline index: {}", index);
-
     // Streamline already log this error, keep using the previous data
     static uint32_t lastFrameId = UINT32_MAX;
     if (lastFrameId == frameId)
@@ -28,6 +23,11 @@ bool Sl_Inputs_Dx12::setConstants(const sl::Constants& values, uint32_t frameId)
         lastFrameId = frameId;
         return false;
     }
+
+    auto index = frameBasedTracking ? frameId % BUFFER_COUNT : 0;
+    auto& data = slConstants[index];
+
+    LOG_DEBUG("Setting consts for streamline index: {}", index);
 
     data = sl::Constants {};
 

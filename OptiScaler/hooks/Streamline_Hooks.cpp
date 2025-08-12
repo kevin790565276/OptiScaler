@@ -121,11 +121,14 @@ sl::Result StreamlineHooks::hkslInit(sl::Preferences* pref, uint64_t sdkVersion)
 sl::Result StreamlineHooks::hkslSetTag(sl::ViewportHandle& viewport, sl::ResourceTag* tags, uint32_t numTags,
                                        sl::CommandBuffer* cmdBuffer)
 {
-    if (renderApi != sl::RenderAPI::eD3D12)
+    if (renderApi == sl::RenderAPI::eD3D11 || renderApi == sl::RenderAPI::eVulkan)
     {
         LOG_ERROR("hkslSetTag only supports DX12");
         return o_slSetTag(viewport, tags, numTags, cmdBuffer);
     }
+
+    if (renderApi == sl::RenderAPI::eCount)
+        LOG_WARN("Incomplete Streamline hooks");
 
     for (uint32_t i = 0; i < numTags; i++)
     {
@@ -163,11 +166,14 @@ sl::Result StreamlineHooks::hkslSetTagForFrame(const sl::FrameToken& frame, cons
                                                const sl::ResourceTag* resources, uint32_t numResources,
                                                sl::CommandBuffer* cmdBuffer)
 {
-    if (renderApi != sl::RenderAPI::eD3D12)
+    if (renderApi == sl::RenderAPI::eD3D11 || renderApi == sl::RenderAPI::eVulkan)
     {
         LOG_ERROR("hkslSetTagForFrame only supports DX12");
         return o_slSetTagForFrame(frame, viewport, resources, numResources, cmdBuffer);
     }
+
+    if (renderApi == sl::RenderAPI::eCount)
+        LOG_WARN("Incomplete Streamline hooks");
 
     for (uint32_t i = 0; i < numResources; i++)
     {
