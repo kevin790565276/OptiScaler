@@ -2637,14 +2637,13 @@ bool MenuCommon::RenderMenu()
                 auto forceVsyncOn = State::Instance().forceVsync.has_value() && State::Instance().forceVsync.value();
                 auto forceVsyncOff = State::Instance().forceVsync.has_value() && !State::Instance().forceVsync.value();
 
-                if (ImGui::Checkbox("Force: V-Sync On", &forceVsyncOn))
+                if (ImGui::Checkbox("V-Sync On", &forceVsyncOn))
                 {
                     if (forceVsyncOn)
                         State::Instance().forceVsync = true;
                     else
                         State::Instance().forceVsync.reset();
                 }
-
                 ImGui::SameLine(0.0f, 16.0f);
 
                 if (ImGui::Checkbox("V-Sync Off", &forceVsyncOff))
@@ -2654,10 +2653,9 @@ bool MenuCommon::RenderMenu()
                     else
                         State::Instance().forceVsync.reset();
                 }
-
                 ImGui::SameLine(0.0f, 16.0f);
 
-                ImGui::BeginDisabled(forceVsyncOff);
+                ImGui::BeginDisabled(!forceVsyncOn);
 
                 ImGui::PushItemWidth(50.0f * Config::Instance()->MenuScale.value_or_default());
                 if (ImGui::BeginCombo("Sync Int.", std::format("{}", State::Instance().vsyncInterval).c_str()))
@@ -2679,11 +2677,12 @@ bool MenuCommon::RenderMenu()
                 ImGui::PopItemWidth();
 
                 ImGui::EndDisabled();
-
                 ImGui::SameLine(0.0f, 16.0f);
 
                 if (ImGui::Button("Reset##10"))
                     State::Instance().forceVsync.reset();
+
+                ShowHelpMarker("Force V-Sync On/Off & Sync Interval options");
 
                 // if (State::Instance().activeFgInput != Config::Instance()->FGInput.value_or_default())
                 //{
