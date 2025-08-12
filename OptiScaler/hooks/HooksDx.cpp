@@ -297,6 +297,21 @@ static HRESULT hkFGPresent(void* This, UINT SyncInterval, UINT Flags)
             LOG_WARN("Couldn't copy hudless into the backbuffer");
     }
 
+    if (willPresent && State::Instance().forceVsync.has_value())
+    {
+        if (!State::Instance().forceVsync.value())
+        {
+            SyncInterval = 0;
+            Flags |= DXGI_PRESENT_ALLOW_TEARING;
+        }
+        else
+        {
+            // Remove allow tearing
+            SyncInterval = State::Instance().vsyncInterval;
+            Flags &= 0xFDFF;
+        }
+    }
+
     HRESULT result;
     result = o_FGSCPresent(This, SyncInterval, Flags);
     LOG_DEBUG("Result: {:X}", result);
@@ -681,6 +696,9 @@ static HRESULT hkCreateSwapChainForCoreWindow(IDXGIFactory2* pFactory, IUnknown*
         pDesc->Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
     }
 
+    // For vsync override
+    pDesc->Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+
     ID3D12CommandQueue* realQ = nullptr;
     if (!CheckForRealObject(__FUNCTION__, pDevice, (IUnknown**) &realQ))
         realQ = (ID3D12CommandQueue*) pDevice;
@@ -820,6 +838,9 @@ static HRESULT hkCreateSwapChain(IDXGIFactory* pFactory, IUnknown* pDevice, DXGI
     LOG_DEBUG("Width: {}, Height: {}, Format: {:X}, Count: {}, Hwnd: {:X}, Windowed: {}, SkipWrapping: {}",
               pDesc->BufferDesc.Width, pDesc->BufferDesc.Height, (UINT) pDesc->BufferDesc.Format, pDesc->BufferCount,
               (UINT) pDesc->OutputWindow, pDesc->Windowed, _skipFGSwapChainCreation);
+
+    // For vsync override
+    pDesc->Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
     // Crude implementation of EndlesslyFlowering's AutoHDR-ReShade
     // https://github.com/EndlesslyFlowering/AutoHDR-ReShade
@@ -1146,6 +1167,9 @@ static HRESULT hkCreateSwapChainForHwnd(IDXGIFactory* This, IUnknown* pDevice, H
         pDesc->SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
         pDesc->Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
     }
+
+    // For vsync override
+    pDesc->Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
     // Disable FSR FG if amd dll is not found
     if (State::Instance().activeFgOutput == FGOutput::FSRFG && !FfxApiProxy::InitFfxDx12())

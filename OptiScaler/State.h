@@ -95,6 +95,8 @@ class State
     bool FGchanged = false;
     bool SCchanged = false;
     bool skipHeapCapture = false;
+    std::optional<bool> forceVsync;
+    UINT vsyncInterval = 0;
 
     bool FGcaptureResources = false;
     int FGcapturedResourceCount = false;

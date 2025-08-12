@@ -2634,6 +2634,57 @@ bool MenuCommon::RenderMenu()
                                    "UI elements and ONLY UI elements should have a pink tint!");
                 }
 
+                auto forceVsyncOn = State::Instance().forceVsync.has_value() && State::Instance().forceVsync.value();
+                auto forceVsyncOff = State::Instance().forceVsync.has_value() && !State::Instance().forceVsync.value();
+
+                if (ImGui::Checkbox("Force: V-Sync On", &forceVsyncOn))
+                {
+                    if (forceVsyncOn)
+                        State::Instance().forceVsync = true;
+                    else
+                        State::Instance().forceVsync.reset();
+                }
+
+                ImGui::SameLine(0.0f, 16.0f);
+
+                if (ImGui::Checkbox("V-Sync Off", &forceVsyncOff))
+                {
+                    if (forceVsyncOff)
+                        State::Instance().forceVsync = false;
+                    else
+                        State::Instance().forceVsync.reset();
+                }
+
+                ImGui::SameLine(0.0f, 16.0f);
+
+                ImGui::BeginDisabled(forceVsyncOff);
+
+                ImGui::PushItemWidth(50.0f * Config::Instance()->MenuScale.value_or_default());
+                if (ImGui::BeginCombo("Sync Int.", std::format("{}", State::Instance().vsyncInterval).c_str()))
+                {
+                    if (ImGui::Selectable("0", State::Instance().vsyncInterval == 0))
+                        State::Instance().vsyncInterval = 0;
+
+                    if (ImGui::Selectable("1", State::Instance().vsyncInterval == 1))
+                        State::Instance().vsyncInterval = 1;
+
+                    if (ImGui::Selectable("2", State::Instance().vsyncInterval == 2))
+                        State::Instance().vsyncInterval = 2;
+
+                    if (ImGui::Selectable("3", State::Instance().vsyncInterval == 3))
+                        State::Instance().vsyncInterval = 3;
+
+                    ImGui::EndCombo();
+                }
+                ImGui::PopItemWidth();
+
+                ImGui::EndDisabled();
+
+                ImGui::SameLine(0.0f, 16.0f);
+
+                if (ImGui::Button("Reset##10"))
+                    State::Instance().forceVsync.reset();
+
                 // if (State::Instance().activeFgInput != Config::Instance()->FGInput.value_or_default())
                 //{
                 //     State::Instance().activeFgInput = Config::Instance()->FGInput.value_or_default();
