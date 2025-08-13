@@ -84,6 +84,9 @@ NvAPI_Status ReflexHooks::hkNvAPI_D3D_SetLatencyMarker(IUnknown* pDev,
             State::Instance().slFGInputs.evaluateState(device12);
     }
 
+    if (pSetLatencyMarkerParams->markerType == PRESENT_START && State::Instance().activeFgInput == FGInput::DLSSG)
+        State::Instance().slFGInputs.markPresent(pSetLatencyMarkerParams->frameID);
+
     if (State::Instance().activeFgOutput == FGOutput::XeFG && fakenvapi::ForNvidia_SetLatencyMarker)
         return fakenvapi::ForNvidia_SetLatencyMarker(pDev, pSetLatencyMarkerParams);
     else

@@ -6,7 +6,22 @@
 std::optional<sl::Constants>* Sl_Inputs_Dx12::getFrameData(IFGFeature_Dx12* fgOutput)
 {
     auto frameId = indexToFrameIdMapping[fgOutput->GetIndex()];
-    return &slConstants[frameId % BUFFER_COUNT];
+
+    if (frameId != 0)
+    {
+        LOG_TRACE("Using SL's frame id: {}", frameId);
+        return &slConstants[frameId % BUFFER_COUNT];
+    }
+    else if (lastConstantsFrameId > lastPresentFrameId)
+    {
+        LOG_TRACE("Using last reflex present frame id: {}", lastPresentFrameId);
+        return &slConstants[lastPresentFrameId % BUFFER_COUNT];
+    }
+    else
+    {
+        LOG_TRACE("Using constants frame id: {}", lastConstantsFrameId);
+        return &slConstants[lastConstantsFrameId % BUFFER_COUNT];
+    }
 }
 
 bool Sl_Inputs_Dx12::setConstants(const sl::Constants& values, uint32_t frameId)
@@ -17,17 +32,12 @@ bool Sl_Inputs_Dx12::setConstants(const sl::Constants& values, uint32_t frameId)
         return false;
 
     // Streamline already log this error, keep using the previous data
-    static uint32_t lastFrameId = UINT32_MAX;
-    if (lastFrameId == frameId)
-    {
-        lastFrameId = frameId;
+    if (lastConstantsFrameId == frameId)
         return false;
-    }
 
-    auto index = frameBasedTracking ? frameId % BUFFER_COUNT : 0;
-    auto& data = slConstants[index];
+    lastConstantsFrameId = frameId;
 
-    LOG_DEBUG("Setting consts for streamline index: {}", index);
+    auto& data = slConstants[frameId % BUFFER_COUNT];
 
     data = sl::Constants {};
 
@@ -156,7 +166,6 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
 
         dispatched = false;
 
-        frameBasedTracking = frameId != 0;
         indexToFrameIdMapping[fgOutput->GetIndex()] = frameId;
     }
 
@@ -329,8 +338,6 @@ bool Sl_Inputs_Dx12::dispatchFG()
 
     auto& slConstsRef = data->value();
 
-    LOG_DEBUG("Using consts for streamline index: {}", indexToFrameIdMapping[fgOutput->GetIndex()] % BUFFER_COUNT);
-
     if (State::Instance().FGchanged)
         return false;
 
@@ -418,11 +425,9 @@ bool Sl_Inputs_Dx12::dispatchFG()
     // bool multiplyByResolution = dataCopy.mvecScale.x != 1.f || dataCopy.mvecScale.y != 1.f;
     bool multiplyByResolution = true;
     if (multiplyByResolution)
-    {
-        slConstsRef.mvecScale.x *= mvsWidth;
-        slConstsRef.mvecScale.y *= mvsHeight;
-    }
-    fgOutput->SetMVScale(slConstsRef.mvecScale.x, slConstsRef.mvecScale.y);
+        fgOutput->SetMVScale(slConstsRef.mvecScale.x * mvsWidth, slConstsRef.mvecScale.y * mvsHeight);
+    else
+        fgOutput->SetMVScale(slConstsRef.mvecScale.x, slConstsRef.mvecScale.y);
 
     fgOutput->SetCameraData(
         reinterpret_cast<float*>(&slConstsRef.cameraPos), reinterpret_cast<float*>(&slConstsRef.cameraUp),
@@ -445,4 +450,10 @@ void Sl_Inputs_Dx12::markLastSendAsRequired()
     mvsSent = false;
     uiSent = false;
     distortionFieldSent = false;
+}
+
+void Sl_Inputs_Dx12::markPresent(uint64_t frameId)
+{
+    LOG_TRACE("Present Start: {}", frameId);
+    lastPresentFrameId = frameId;
 }

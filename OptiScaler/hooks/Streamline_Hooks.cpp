@@ -402,6 +402,7 @@ bool StreamlineHooks::hkdlssg_slOnPluginLoad(void* params, const char* loaderJSO
     {
         configJson["hooks"].clear();
         configJson["exclusive_hooks"].clear();
+        configJson["external"]["feature"]["tags"].clear(); // We handle the DLSSG resources
     }
 
     if (Config::Instance()->VulkanExtensionSpoofing.value_or_default())
@@ -799,6 +800,9 @@ void StreamlineHooks::hookInterposer(HMODULE slInterposer)
         }
         else if (sl_version.major == 1)
         {
+            if (State::Instance().activeFgInput == FGInput::DLSSG)
+                State::Instance().activeFgInput = FGInput::NoFG;
+
             o_slInit_sl1 =
                 reinterpret_cast<decltype(&sl1::slInit)>(KernelBaseProxy::GetProcAddress_()(slInterposer, "slInit"));
 

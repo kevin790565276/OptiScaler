@@ -23,7 +23,8 @@ class Sl_Inputs_Dx12
 
     bool dispatched = false;
 
-    bool frameBasedTracking = false;
+    uint32_t lastConstantsFrameId = UINT32_MAX;
+    uint32_t lastPresentFrameId = 0;
     uint32_t indexToFrameIdMapping[BUFFER_COUNT] {};
 
     uint32_t mvsWidth = 0;
@@ -41,6 +42,7 @@ class Sl_Inputs_Dx12
     void reportEngineType(sl::EngineType type) { engineType = type; };
     bool dispatchFG();
     void markLastSendAsRequired();
+    void markPresent(uint64_t frameId);
 
     // A minimum of required inputs
     // If we are missing any by the time of present, then we have have bigger issues
