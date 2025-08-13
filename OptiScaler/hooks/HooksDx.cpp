@@ -2162,31 +2162,23 @@ static HRESULT hkD3D12SerializeRootSignature(D3d12Proxy::D3D12_ROOT_SIGNATURE_DE
             {
                 bool force = false;
 
-                switch (samplerDesc->Filter)
+                if (samplerDesc->Filter >= D3D12_FILTER_COMPARISON_MIN_MAG_MIP_POINT &&
+                    samplerDesc->Filter <= D3D12_FILTER_COMPARISON_ANISOTROPIC)
                 {
-                case D3D12_FILTER_MIN_MAG_MIP_LINEAR:
-                case D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT:
-                    samplerDesc->Filter = D3D12_FILTER_ANISOTROPIC;
                     force = true;
-                    break;
-
-                case D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR:
-                case D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT:
                     samplerDesc->Filter = D3D12_FILTER_COMPARISON_ANISOTROPIC;
+                }
+                else if (samplerDesc->Filter >= D3D12_FILTER_MINIMUM_MIN_MAG_MIP_POINT &&
+                         samplerDesc->Filter <= D3D12_FILTER_MINIMUM_ANISOTROPIC)
+                {
                     force = true;
-                    break;
-
-                case D3D12_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR:
-                case D3D12_FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT:
                     samplerDesc->Filter = D3D12_FILTER_MINIMUM_ANISOTROPIC;
+                }
+                else if (samplerDesc->Filter >= D3D12_FILTER_MAXIMUM_MIN_MAG_MIP_POINT &&
+                         samplerDesc->Filter <= D3D12_FILTER_MAXIMUM_ANISOTROPIC)
+                {
                     force = true;
-                    break;
-
-                case D3D12_FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR:
-                case D3D12_FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT:
                     samplerDesc->Filter = D3D12_FILTER_MAXIMUM_ANISOTROPIC;
-                    force = true;
-                    break;
                 }
 
                 if (force)
@@ -2244,31 +2236,23 @@ static HRESULT hkD3D12SerializeVersionedRootSignature(D3d12Proxy::D3D12_VERSIONE
             {
                 bool force = false;
 
-                switch (samplerDesc->Filter)
+                if (samplerDesc->Filter >= D3D12_FILTER_COMPARISON_MIN_MAG_MIP_POINT &&
+                    samplerDesc->Filter <= D3D12_FILTER_COMPARISON_ANISOTROPIC)
                 {
-                case D3D12_FILTER_MIN_MAG_MIP_LINEAR:
-                case D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT:
-                    samplerDesc->Filter = D3D12_FILTER_ANISOTROPIC;
                     force = true;
-                    break;
-
-                case D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR:
-                case D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT:
                     samplerDesc->Filter = D3D12_FILTER_COMPARISON_ANISOTROPIC;
+                }
+                else if (samplerDesc->Filter >= D3D12_FILTER_MINIMUM_MIN_MAG_MIP_POINT &&
+                         samplerDesc->Filter <= D3D12_FILTER_MINIMUM_ANISOTROPIC)
+                {
                     force = true;
-                    break;
-
-                case D3D12_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR:
-                case D3D12_FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT:
                     samplerDesc->Filter = D3D12_FILTER_MINIMUM_ANISOTROPIC;
+                }
+                else if (samplerDesc->Filter >= D3D12_FILTER_MAXIMUM_MIN_MAG_MIP_POINT &&
+                         samplerDesc->Filter <= D3D12_FILTER_MAXIMUM_ANISOTROPIC)
+                {
                     force = true;
-                    break;
-
-                case D3D12_FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR:
-                case D3D12_FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT:
                     samplerDesc->Filter = D3D12_FILTER_MAXIMUM_ANISOTROPIC;
-                    force = true;
-                    break;
                 }
 
                 if (force)
@@ -2445,31 +2429,23 @@ static void hkCreateSampler(ID3D12Device* device, const D3D12_SAMPLER_DESC* pDes
     {
         bool force = false;
 
-        switch (pDesc->Filter)
+        if (pDesc->Filter >= D3D12_FILTER_COMPARISON_MIN_MAG_MIP_POINT &&
+            pDesc->Filter <= D3D12_FILTER_COMPARISON_ANISOTROPIC)
         {
-        case D3D12_FILTER_MIN_MAG_MIP_LINEAR:
-        case D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT:
-            newDesc.Filter = D3D12_FILTER_ANISOTROPIC;
             force = true;
-            break;
-
-        case D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR:
-        case D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT:
             newDesc.Filter = D3D12_FILTER_COMPARISON_ANISOTROPIC;
+        }
+        else if (pDesc->Filter >= D3D12_FILTER_MINIMUM_MIN_MAG_MIP_POINT &&
+                 pDesc->Filter <= D3D12_FILTER_MINIMUM_ANISOTROPIC)
+        {
             force = true;
-            break;
-
-        case D3D12_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR:
-        case D3D12_FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT:
             newDesc.Filter = D3D12_FILTER_MINIMUM_ANISOTROPIC;
+        }
+        else if (pDesc->Filter >= D3D12_FILTER_MAXIMUM_MIN_MAG_MIP_POINT &&
+                 pDesc->Filter <= D3D12_FILTER_MAXIMUM_ANISOTROPIC)
+        {
             force = true;
-            break;
-
-        case D3D12_FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR:
-        case D3D12_FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT:
             newDesc.Filter = D3D12_FILTER_MAXIMUM_ANISOTROPIC;
-            force = true;
-            break;
         }
 
         if (force)
@@ -2544,31 +2520,23 @@ static HRESULT hkCreateSamplerState(ID3D11Device* This, const D3D11_SAMPLER_DESC
     {
         bool force = false;
 
-        switch (pSamplerDesc->Filter)
+        if (pSamplerDesc->Filter >= D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT &&
+            pSamplerDesc->Filter <= D3D11_FILTER_COMPARISON_ANISOTROPIC)
         {
-        case D3D11_FILTER_MIN_MAG_MIP_LINEAR:
-        case D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT:
-            newDesc.Filter = D3D11_FILTER_ANISOTROPIC;
             force = true;
-            break;
-
-        case D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR:
-        case D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT:
             newDesc.Filter = D3D11_FILTER_COMPARISON_ANISOTROPIC;
+        }
+        else if (pSamplerDesc->Filter >= D3D11_FILTER_MINIMUM_MIN_MAG_MIP_POINT &&
+                 pSamplerDesc->Filter <= D3D11_FILTER_MINIMUM_ANISOTROPIC)
+        {
             force = true;
-            break;
-
-        case D3D11_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR:
-        case D3D11_FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT:
             newDesc.Filter = D3D11_FILTER_MINIMUM_ANISOTROPIC;
+        }
+        else if (pSamplerDesc->Filter >= D3D11_FILTER_MAXIMUM_MIN_MAG_MIP_POINT &&
+                 pSamplerDesc->Filter <= D3D11_FILTER_MAXIMUM_ANISOTROPIC)
+        {
             force = true;
-            break;
-
-        case D3D11_FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR:
-        case D3D11_FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT:
             newDesc.Filter = D3D11_FILTER_MAXIMUM_ANISOTROPIC;
-            force = true;
-            break;
         }
 
         if (force)
