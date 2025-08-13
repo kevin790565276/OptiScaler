@@ -127,16 +127,19 @@ bool FSRFG_Dx12::Dispatch()
 
     FfxApiProxy::D3D12_Configure()(&_swapChainContext, &uiDesc.header);
 
-    static auto localLastHudlessFormat = m_FrameGenerationConfig.HUDLessColor.description.format;
-    _lastHudlessFormat = (FfxApiSurfaceFormat) m_FrameGenerationConfig.HUDLessColor.description.format;
-
-    if (_lastHudlessFormat != localLastHudlessFormat)
+    if (m_FrameGenerationConfig.HUDLessColor.resource != nullptr)
     {
-        State::Instance().FGchanged = true;
-        LOG_DEBUG("HUDLESS format changed, triggering FG reinit");
-    }
+        static auto localLastHudlessFormat = m_FrameGenerationConfig.HUDLessColor.description.format;
+        _lastHudlessFormat = (FfxApiSurfaceFormat) m_FrameGenerationConfig.HUDLessColor.description.format;
 
-    localLastHudlessFormat = _lastHudlessFormat;
+        if (_lastHudlessFormat != localLastHudlessFormat)
+        {
+            State::Instance().FGchanged = true;
+            LOG_DEBUG("HUDLESS format changed, triggering FG reinit");
+        }
+
+        localLastHudlessFormat = _lastHudlessFormat;
+    }
 
     m_FrameGenerationConfig.frameGenerationEnabled = true;
     m_FrameGenerationConfig.flags = 0;
