@@ -158,8 +158,6 @@ xefg_swapchain_d3d12_resource_data_t XeFG_Dx12::GetResourceData(FG_ResourceType 
     resourceParam.pResource = fResource->GetResource();
     resourceParam.incomingState = fResource->state;
 
-    xefg_swapchain_resource_type_t xessType;
-
     switch (type)
     {
     case FG_ResourceType::Depth:
@@ -177,6 +175,9 @@ xefg_swapchain_d3d12_resource_data_t XeFG_Dx12::GetResourceData(FG_ResourceType 
     case FG_ResourceType::Velocity:
         resourceParam.type = XEFG_SWAPCHAIN_RES_MOTION_VECTOR;
         break;
+    default:
+        LOG_WARN("Unsupported resource type: {}", magic_enum::enum_name(type));
+        return xefg_swapchain_d3d12_resource_data_t {};
     }
 
     if (type == FG_ResourceType::UIColor || type == FG_ResourceType::HudlessColor)
@@ -602,6 +603,12 @@ void XeFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmd
         return;
     }
 
+    if (type == FG_ResourceType::Distortion)
+    {
+        LOG_TRACE("Distortion field is not supported by XeFG");
+        return;
+    }
+
     auto fIndex = GetIndex();
     _frameResources[fIndex][type] = {};
     auto fResource = &_frameResources[fIndex][type];
@@ -673,8 +680,12 @@ void XeFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmd
 
     SetResourceReady(type);
 
-    if (type == FG_ResourceType::HudlessColor || type == FG_ResourceType::UIColor)
+    static uint64_t lastSetBackbufferFrameId = UINT64_MAX;
+    if (_frameCount != lastSetBackbufferFrameId &&
+        (type == FG_ResourceType::HudlessColor || type == FG_ResourceType::UIColor))
     {
+        lastSetBackbufferFrameId = _frameCount;
+
         xefg_swapchain_d3d12_resource_data_t backbuffer = {};
         backbuffer.type = XEFG_SWAPCHAIN_RES_BACKBUFFER;
         backbuffer.validity = XEFG_SWAPCHAIN_RV_UNTIL_NEXT_PRESENT;
