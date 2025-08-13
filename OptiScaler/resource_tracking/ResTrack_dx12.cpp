@@ -115,11 +115,21 @@ static std::vector<void*> _notFoundCmdLists;
 static std::map<FG_ResourceType, void*> _resCmdList;
 static std::map<FG_ResourceType, bool> _resCmdListFound;
 
+#define USE_BUCKETS_FOR_HEAPS
+
+#ifdef USE_BUCKETS_FOR_HEAPS
+struct HeapCacheTLS
+{
+    HeapInfo* heap = nullptr;
+    unsigned genSeen = 0;
+};
+#else
 struct HeapCacheTLS
 {
     int index = -1;
     unsigned genSeen = 0;
 };
+#endif
 
 static thread_local HeapCacheTLS cache;
 static thread_local HeapCacheTLS cacheRTV;
@@ -130,6 +140,59 @@ static std::atomic<unsigned> gHeapGeneration { 1 };
 
 static thread_local HeapCacheTLS cacheGR;
 static thread_local HeapCacheTLS cacheCR;
+
+#ifdef USE_BUCKETS_FOR_HEAPS
+static constexpr uint32_t BUCKET_SHIFT = 16; // 64 KB buckets
+static std::unordered_map<uint64_t, HeapInfo*> gCpuBuckets;
+static std::unordered_map<uint64_t, HeapInfo*> gGpuBuckets;
+
+static uint64_t BucketOf(SIZE_T addr) { return addr >> BUCKET_SHIFT; }
+
+static void AddHeapBuckets(HeapInfo* h)
+{
+    uint64_t b0 = BucketOf(h->cpuStart);
+    uint64_t b1 = BucketOf(h->cpuEnd - 1);
+    for (uint64_t b = b0; b <= b1; ++b)
+        gCpuBuckets[b] = h;
+
+    b0 = BucketOf(h->gpuStart);
+    b1 = BucketOf(h->gpuEnd - 1);
+    for (uint64_t b = b0; b <= b1; ++b)
+        gGpuBuckets[b] = h;
+}
+
+inline bool InRangeCPU(SIZE_T addr, const HeapInfo* h)
+{
+    const SIZE_T s = h->cpuStart;
+    const SIZE_T e = h->cpuEnd;
+    return (addr - s) < (e - s);
+}
+
+inline bool InRangeGPU(SIZE_T addr, const HeapInfo* h)
+{
+    const SIZE_T s = h->gpuStart;
+    const SIZE_T e = h->gpuEnd;
+    return (addr - s) < (e - s);
+}
+
+HeapInfo* FindHeapByCPU_Bucketed(SIZE_T addr)
+{
+    auto it = gCpuBuckets.find(BucketOf(addr));
+    if (it == gCpuBuckets.end())
+        return nullptr;
+    HeapInfo* h = it->second;
+    return InRangeCPU(addr, h) ? h : nullptr;
+}
+
+HeapInfo* FindHeapByGPU_Bucketed(SIZE_T addr)
+{
+    auto it = gGpuBuckets.find(BucketOf(addr));
+    if (it == gGpuBuckets.end())
+        return nullptr;
+    HeapInfo* h = it->second;
+    return InRangeGPU(addr, h) ? h : nullptr;
+}
+#endif
 
 bool ResTrack_Dx12::CheckResource(ID3D12Resource* resource)
 {
@@ -252,6 +315,19 @@ void ResTrack_Dx12::ResourceBarrier(ID3D12GraphicsCommandList* InCommandList, ID
 SIZE_T ResTrack_Dx12::GetGPUHandle(ID3D12Device* This, SIZE_T cpuHandle, D3D12_DESCRIPTOR_HEAP_TYPE type)
 {
     std::shared_lock<std::shared_mutex> lock(heapMutex);
+
+#ifdef USE_BUCKETS_FOR_HEAPS
+    auto val = FindHeapByCPU_Bucketed(cpuHandle);
+    if (val != nullptr)
+    {
+        auto incSize = This->GetDescriptorHandleIncrementSize(type);
+        auto addr = cpuHandle - val->cpuStart;
+        auto index = addr / incSize;
+        auto gpuAddr = val->gpuStart + (index * incSize);
+
+        return gpuAddr;
+    }
+#else
     for (UINT i = 0; i < fgHeapIndex; i++)
     {
         auto val = fgHeaps[i].get();
@@ -265,6 +341,7 @@ SIZE_T ResTrack_Dx12::GetGPUHandle(ID3D12Device* This, SIZE_T cpuHandle, D3D12_D
             return gpuAddr;
         }
     }
+#endif
 
     return NULL;
 }
@@ -272,6 +349,19 @@ SIZE_T ResTrack_Dx12::GetGPUHandle(ID3D12Device* This, SIZE_T cpuHandle, D3D12_D
 SIZE_T ResTrack_Dx12::GetCPUHandle(ID3D12Device* This, SIZE_T gpuHandle, D3D12_DESCRIPTOR_HEAP_TYPE type)
 {
     std::shared_lock<std::shared_mutex> lock(heapMutex);
+
+#ifdef USE_BUCKETS_FOR_HEAPS
+    auto val = FindHeapByGPU_Bucketed(gpuHandle);
+    if (val != nullptr)
+    {
+        auto incSize = This->GetDescriptorHandleIncrementSize(type);
+        auto addr = gpuHandle - val->gpuStart;
+        auto index = addr / incSize;
+        auto cpuAddr = val->cpuStart + (index * incSize);
+
+        return cpuAddr;
+    }
+#else
     for (UINT i = 0; i < fgHeapIndex; i++)
     {
         auto val = fgHeaps[i].get();
@@ -285,6 +375,7 @@ SIZE_T ResTrack_Dx12::GetCPUHandle(ID3D12Device* This, SIZE_T gpuHandle, D3D12_D
             return cpuAddr;
         }
     }
+#endif
 
     return NULL;
 }
@@ -293,6 +384,21 @@ HeapInfo* ResTrack_Dx12::GetHeapByCpuHandleCBV(SIZE_T cpuHandle)
 {
     unsigned currentGen = gHeapGeneration.load(std::memory_order_relaxed);
 
+#ifdef USE_BUCKETS_FOR_HEAPS
+    if (cacheCBV.genSeen == currentGen && cacheCBV.heap != nullptr)
+    {
+        if (cacheCBV.heap->cpuStart <= cpuHandle && cpuHandle < cacheCBV.heap->cpuEnd)
+            return cacheCBV.heap;
+    }
+
+    auto heap = FindHeapByCPU_Bucketed(cpuHandle);
+    if (heap != nullptr)
+    {
+        cacheCBV.heap = heap;
+        cacheCBV.genSeen = currentGen;
+    }
+    return heap;
+#else
     if (cacheCBV.genSeen == currentGen && cacheCBV.index != -1)
     {
         auto heapInfo = fgHeaps[cacheCBV.index].get();
@@ -312,12 +418,28 @@ HeapInfo* ResTrack_Dx12::GetHeapByCpuHandleCBV(SIZE_T cpuHandle)
     }
 
     return nullptr;
+#endif
 }
 
 HeapInfo* ResTrack_Dx12::GetHeapByCpuHandleRTV(SIZE_T cpuHandle)
 {
     unsigned currentGen = gHeapGeneration.load(std::memory_order_relaxed);
 
+#ifdef USE_BUCKETS_FOR_HEAPS
+    if (cacheRTV.genSeen == currentGen && cacheRTV.heap != nullptr)
+    {
+        if (cacheRTV.heap->cpuStart <= cpuHandle && cpuHandle < cacheRTV.heap->cpuEnd)
+            return cacheRTV.heap;
+    }
+
+    auto heap = FindHeapByCPU_Bucketed(cpuHandle);
+    if (heap != nullptr)
+    {
+        cacheRTV.heap = heap;
+        cacheRTV.genSeen = currentGen;
+    }
+    return heap;
+#else
     if (cacheRTV.genSeen == currentGen && cacheRTV.index != -1)
     {
         auto heapInfo = fgHeaps[cacheRTV.index].get();
@@ -337,12 +459,28 @@ HeapInfo* ResTrack_Dx12::GetHeapByCpuHandleRTV(SIZE_T cpuHandle)
     }
 
     return nullptr;
+#endif
 }
 
 HeapInfo* ResTrack_Dx12::GetHeapByCpuHandleSRV(SIZE_T cpuHandle)
 {
     unsigned currentGen = gHeapGeneration.load(std::memory_order_relaxed);
 
+#ifdef USE_BUCKETS_FOR_HEAPS
+    if (cacheSRV.genSeen == currentGen && cacheSRV.heap != nullptr)
+    {
+        if (cacheSRV.heap->cpuStart <= cpuHandle && cpuHandle < cacheSRV.heap->cpuEnd)
+            return cacheSRV.heap;
+    }
+
+    auto heap = FindHeapByCPU_Bucketed(cpuHandle);
+    if (heap != nullptr)
+    {
+        cacheSRV.heap = heap;
+        cacheSRV.genSeen = currentGen;
+    }
+    return heap;
+#else
     if (cacheSRV.genSeen == currentGen && cacheSRV.index != -1)
     {
         auto heapInfo = fgHeaps[cacheSRV.index].get();
@@ -362,12 +500,28 @@ HeapInfo* ResTrack_Dx12::GetHeapByCpuHandleSRV(SIZE_T cpuHandle)
     }
 
     return nullptr;
+#endif
 }
 
 HeapInfo* ResTrack_Dx12::GetHeapByCpuHandleUAV(SIZE_T cpuHandle)
 {
     unsigned currentGen = gHeapGeneration.load(std::memory_order_relaxed);
 
+#ifdef USE_BUCKETS_FOR_HEAPS
+    if (cacheUAV.genSeen == currentGen && cacheUAV.heap != nullptr)
+    {
+        if (cacheUAV.heap->cpuStart <= cpuHandle && cpuHandle < cacheUAV.heap->cpuEnd)
+            return cacheUAV.heap;
+    }
+
+    auto heap = FindHeapByCPU_Bucketed(cpuHandle);
+    if (heap != nullptr)
+    {
+        cacheUAV.heap = heap;
+        cacheUAV.genSeen = currentGen;
+    }
+    return heap;
+#else
     if (cacheUAV.genSeen == currentGen && cacheUAV.index != -1)
     {
         auto heapInfo = fgHeaps[cacheUAV.index].get();
@@ -387,15 +541,29 @@ HeapInfo* ResTrack_Dx12::GetHeapByCpuHandleUAV(SIZE_T cpuHandle)
     }
 
     return nullptr;
+#endif
 }
 
 HeapInfo* ResTrack_Dx12::GetHeapByCpuHandle(SIZE_T cpuHandle)
 {
     unsigned currentGen = gHeapGeneration.load(std::memory_order_relaxed);
 
+#ifdef USE_BUCKETS_FOR_HEAPS
+    if (cache.genSeen == currentGen && cache.heap != nullptr)
     {
-        std::shared_lock<std::shared_mutex> lock(heapMutex);
+        if (cache.heap->cpuStart <= cpuHandle && cpuHandle < cache.heap->cpuEnd)
+            return cache.heap;
+    }
 
+    auto heap = FindHeapByCPU_Bucketed(cpuHandle);
+    if (heap != nullptr)
+    {
+        cache.heap = heap;
+        cache.genSeen = currentGen;
+    }
+    return heap;
+#else
+    {
         if (cache.genSeen == currentGen && cache.index != -1)
         {
             auto heapInfo = fgHeaps[cache.index].get();
@@ -416,15 +584,29 @@ HeapInfo* ResTrack_Dx12::GetHeapByCpuHandle(SIZE_T cpuHandle)
     }
 
     return nullptr;
+#endif
 }
 
 HeapInfo* ResTrack_Dx12::GetHeapByGpuHandleGR(SIZE_T gpuHandle)
 {
     unsigned currentGen = gHeapGeneration.load(std::memory_order_relaxed);
 
+#ifdef USE_BUCKETS_FOR_HEAPS
+    if (cacheGR.genSeen == currentGen && cacheGR.heap != nullptr)
     {
-        std::shared_lock<std::shared_mutex> lock(heapMutex);
+        if (cacheGR.heap->cpuStart <= gpuHandle && gpuHandle < cacheGR.heap->cpuEnd)
+            return cacheGR.heap;
+    }
 
+    auto heap = FindHeapByGPU_Bucketed(gpuHandle);
+    if (heap != nullptr)
+    {
+        cacheGR.heap = heap;
+        cacheGR.genSeen = currentGen;
+    }
+    return heap;
+#else
+    {
         if (cacheGR.genSeen == currentGen && cacheGR.index != -1)
         {
             auto heapInfo = fgHeaps[cacheGR.index].get();
@@ -445,6 +627,7 @@ HeapInfo* ResTrack_Dx12::GetHeapByGpuHandleGR(SIZE_T gpuHandle)
     }
 
     return nullptr;
+#endif
 }
 
 HeapInfo* ResTrack_Dx12::GetHeapByGpuHandleCR(SIZE_T gpuHandle)
@@ -454,9 +637,22 @@ HeapInfo* ResTrack_Dx12::GetHeapByGpuHandleCR(SIZE_T gpuHandle)
 
     unsigned currentGen = gHeapGeneration.load(std::memory_order_relaxed);
 
+#ifdef USE_BUCKETS_FOR_HEAPS
+    if (cacheCR.genSeen == currentGen && cacheCR.heap != nullptr)
     {
-        std::shared_lock<std::shared_mutex> lock(heapMutex);
+        if (cacheCR.heap->cpuStart <= gpuHandle && gpuHandle < cacheCR.heap->cpuEnd)
+            return cacheCR.heap;
+    }
 
+    auto heap = FindHeapByGPU_Bucketed(gpuHandle);
+    if (heap != nullptr)
+    {
+        cacheCR.heap = heap;
+        cacheCR.genSeen = currentGen;
+    }
+    return heap;
+#else
+    {
         if (cacheCR.genSeen == currentGen && cacheCR.index != -1)
         {
             auto heapInfo = fgHeaps[cacheCR.index].get();
@@ -477,6 +673,7 @@ HeapInfo* ResTrack_Dx12::GetHeapByGpuHandleCR(SIZE_T gpuHandle)
     }
 
     return nullptr;
+#endif
 }
 
 #pragma endregion
@@ -798,6 +995,11 @@ HRESULT ResTrack_Dx12::hkCreateDescriptorHeap(ID3D12Device* This, D3D12_DESCRIPT
             std::unique_lock<std::shared_mutex> lock(heapMutex);
             fgHeaps[fgHeapIndex] = std::make_unique<HeapInfo>(heap, cpuStart, cpuEnd, gpuStart, gpuEnd, numDescriptors,
                                                               increment, type, fgHeapIndex);
+
+#ifdef USE_BUCKETS_FOR_HEAPS
+            AddHeapBuckets(fgHeaps[fgHeapIndex].get());
+#endif
+
             fgHeapIndex++;
             gHeapGeneration.fetch_add(1, std::memory_order_relaxed);
         }
