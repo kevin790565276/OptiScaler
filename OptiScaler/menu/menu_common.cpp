@@ -2504,27 +2504,38 @@ bool MenuCommon::RenderMenu()
                 // clang-format on
 
                 // OptiFG requirements
+                auto constexpr optiFgIndex = (uint32_t) FGInput::Upscaler;
                 if (!Config::Instance()->OverlayMenu.value_or_default())
                 {
-                    disabledMaskInput[5] = true;
-                    fgInputDesc[5] = "Old overlay menu is unsupported";
+                    disabledMaskInput[optiFgIndex] = true;
+                    fgInputDesc[optiFgIndex] = "Old overlay menu is unsupported";
                 }
                 else if (State::Instance().api != DX12)
                 {
-                    disabledMaskInput[5] = true;
-                    fgInputDesc[5] = "Unsupported API";
+                    disabledMaskInput[optiFgIndex] = true;
+                    fgInputDesc[optiFgIndex] = "Unsupported API";
                 }
                 else if (State::Instance().isWorkingAsNvngx)
                 {
-                    disabledMaskInput[5] = true;
-                    fgInputDesc[5] = "Unsupported Opti working mode";
+                    disabledMaskInput[optiFgIndex] = true;
+                    fgInputDesc[optiFgIndex] = "Unsupported Opti working mode";
                 }
                 else if ((fsr31InitTried && FfxApiProxy::Dx12Module() == nullptr) ||
                          (!fsr31InitTried && !FfxApiProxy::InitFfxDx12()))
                 {
                     fsr31InitTried = true;
-                    disabledMaskInput[5] = true;
-                    fgInputDesc[5] = "amd_fidelityfx_dx12.dll is missing";
+                    disabledMaskInput[optiFgIndex] = true;
+                    fgInputDesc[optiFgIndex] = "amd_fidelityfx_dx12.dll is missing";
+                }
+
+                auto constexpr dlssgInputIndex = (uint32_t) FGInput::DLSSG;
+                if (State::Instance().streamlineVersion.major < 2)
+                {
+                    disabledMaskInput[dlssgInputIndex] = true;
+                    fgInputDesc[dlssgInputIndex] = "Unsupported Streamline version";
+
+                    if (Config::Instance()->FGInput.value_or_default() == FGInput::DLSSG)
+                        Config::Instance()->FGInput.reset();
                 }
 
                 constexpr auto fgInputOptionsCount = sizeof(fgInputOptions) / sizeof(char*);
@@ -2558,26 +2569,28 @@ bool MenuCommon::RenderMenu()
                 // clang-format on
 
                 // Nukem's FG mod requirements
+                auto constexpr nukemsInputIndex = (uint32_t) FGInput::Nukems;
+                auto constexpr nukemsOutputIndex = (uint32_t) FGOutput::Nukems;
                 if (State::Instance().api == DX11)
                 {
-                    disabledMaskInput[1] = true;
-                    fgInputDesc[1] = "Unsupported API";
-                    disabledMaskOutput[1] = true;
-                    fgOutputDesc[1] = "Unsupported API";
+                    disabledMaskInput[nukemsInputIndex] = true;
+                    fgInputDesc[nukemsInputIndex] = "Unsupported API";
+                    disabledMaskOutput[nukemsOutputIndex] = true;
+                    fgOutputDesc[nukemsOutputIndex] = "Unsupported API";
                 }
                 else if (State::Instance().isWorkingAsNvngx)
                 {
-                    disabledMaskInput[1] = true;
-                    fgInputDesc[1] = "Unsupported Opti working mode";
-                    disabledMaskOutput[1] = true;
-                    fgOutputDesc[1] = "Unsupported Opti working mode";
+                    disabledMaskInput[nukemsInputIndex] = true;
+                    fgInputDesc[nukemsInputIndex] = "Unsupported Opti working mode";
+                    disabledMaskOutput[nukemsOutputIndex] = true;
+                    fgOutputDesc[nukemsOutputIndex] = "Unsupported Opti working mode";
                 }
                 else if (!State::Instance().NukemsFilesAvailable)
                 {
-                    disabledMaskInput[1] = true;
-                    fgInputDesc[1] = "Missing the dlssg_to_fsr3_amd_is_better.dll file";
-                    disabledMaskOutput[1] = true;
-                    fgOutputDesc[1] = "Missing the dlssg_to_fsr3_amd_is_better.dll file";
+                    disabledMaskInput[nukemsInputIndex] = true;
+                    fgInputDesc[nukemsInputIndex] = "Missing the dlssg_to_fsr3_amd_is_better.dll file";
+                    disabledMaskOutput[nukemsOutputIndex] = true;
+                    fgOutputDesc[nukemsOutputIndex] = "Missing the dlssg_to_fsr3_amd_is_better.dll file";
                 }
 
                 constexpr auto fgOutputOptionsCount = std::size(fgOutputOptions);

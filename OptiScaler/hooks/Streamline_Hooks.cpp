@@ -800,6 +800,9 @@ void StreamlineHooks::hookInterposer(HMODULE slInterposer)
         }
         else if (sl_version.major == 1)
         {
+            if (State::Instance().activeFgInput == FGInput::DLSSG)
+                State::Instance().activeFgInput = FGInput::NoFG;
+
             o_slInit_sl1 =
                 reinterpret_cast<decltype(&sl1::slInit)>(KernelBaseProxy::GetProcAddress_()(slInterposer, "slInit"));
 
