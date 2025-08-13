@@ -691,12 +691,10 @@ static HRESULT hkCreateSwapChainForCoreWindow(IDXGIFactory2* pFactory, IUnknown*
 
         if (pDesc->BufferCount < 2)
             pDesc->BufferCount = 2;
-
-        pDesc->SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-        pDesc->Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
     }
 
     // For vsync override
+    pDesc->SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     pDesc->Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
     ID3D12CommandQueue* realQ = nullptr;
@@ -841,6 +839,7 @@ static HRESULT hkCreateSwapChain(IDXGIFactory* pFactory, IUnknown* pDevice, DXGI
 
     // For vsync override
     pDesc->Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+    pDesc->SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
     // Crude implementation of EndlesslyFlowering's AutoHDR-ReShade
     // https://github.com/EndlesslyFlowering/AutoHDR-ReShade
@@ -861,9 +860,6 @@ static HRESULT hkCreateSwapChain(IDXGIFactory* pFactory, IUnknown* pDevice, DXGI
 
         if (pDesc->BufferCount < 2)
             pDesc->BufferCount = 2;
-
-        pDesc->SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-        pDesc->Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
     }
 
     // Disable FSR FG if amd dll is not found
@@ -1163,12 +1159,10 @@ static HRESULT hkCreateSwapChainForHwnd(IDXGIFactory* This, IUnknown* pDevice, H
 
         if (pDesc->BufferCount < 2)
             pDesc->BufferCount = 2;
-
-        pDesc->SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-        pDesc->Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
     }
 
     // For vsync override
+    pDesc->SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     pDesc->Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
     // Disable FSR FG if amd dll is not found
