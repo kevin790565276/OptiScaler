@@ -402,6 +402,7 @@ bool StreamlineHooks::hkdlssg_slOnPluginLoad(void* params, const char* loaderJSO
     {
         configJson["hooks"].clear();
         configJson["exclusive_hooks"].clear();
+        configJson["external"]["feature"]["tags"].clear(); // We handle the DLSSG resources
     }
 
     if (Config::Instance()->VulkanExtensionSpoofing.value_or_default())
