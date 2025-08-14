@@ -45,7 +45,6 @@ typedef struct HeapInfo
     SIZE_T cpuEnd = NULL;
     SIZE_T gpuStart = NULL;
     SIZE_T gpuEnd = NULL;
-    SIZE_T size = NULL;
     UINT numDescriptors = 0;
     UINT increment = 0;
     UINT type = 0;
@@ -62,8 +61,6 @@ typedef struct HeapInfo
         {
             info[i].buffer = nullptr;
         }
-
-        size = increment * numDescriptors;
     }
 
     ResourceInfo* GetByCpuHandle(SIZE_T cpuHandle) const
@@ -167,6 +164,8 @@ typedef struct HeapInfo
         if (index >= numDescriptors)
             return;
 
+        _trMutex.lock();
+
         if (info[index].buffer != nullptr)
         {
             LOG_TRACK("Resource: {:X}, Res: {}x{}", (size_t) info[index].buffer, info[index].width, info[index].height);
@@ -179,15 +178,15 @@ typedef struct HeapInfo
                 {
                     if (vector->at(i) == &info[index])
                     {
-                        _trMutex.lock();
                         LOG_TRACK("Erase from _trackedResources info: {:X}", (size_t) vector->at(i));
                         vector->erase(vector->begin() + i);
-                        _trMutex.unlock();
                         break;
                     }
                 }
             }
         }
+
+        _trMutex.unlock();
 
         info[index].buffer = nullptr;
         info[index].lastUsedFrame = 0;
@@ -200,6 +199,8 @@ typedef struct HeapInfo
         if (index >= numDescriptors)
             return;
 
+        _trMutex.lock();
+
         if (info[index].buffer != nullptr)
         {
             LOG_TRACK("Resource: {:X}, Res: {}x{}", (size_t) info[index].buffer, info[index].width, info[index].height);
@@ -212,15 +213,15 @@ typedef struct HeapInfo
                 {
                     if (vector->at(i) == &info[index])
                     {
-                        _trMutex.lock();
                         LOG_TRACK("Erase from _trackedResources info: {:X}", (size_t) vector->at(i));
                         vector->erase(vector->begin() + i);
-                        _trMutex.unlock();
                         break;
                     }
                 }
             }
         }
+
+        _trMutex.unlock();
 
         info[index].buffer = nullptr;
         info[index].lastUsedFrame = 0;
