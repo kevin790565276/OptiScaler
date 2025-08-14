@@ -18,6 +18,9 @@ class FSRFG_Dx12 : public virtual IFGFeature_Dx12
     FfxApiSurfaceFormat _lastHudlessFormat = FFX_API_SURFACE_FORMAT_UNKNOWN;
     FfxApiSurfaceFormat _usingHudlessFormat = FFX_API_SURFACE_FORMAT_UNKNOWN;
 
+    uint32_t _maxRenderWidth = 0;
+    uint32_t _maxRenderHeight = 0;
+
     ID3D12GraphicsCommandList* _fgCommandList[BUFFER_COUNT] {};
     ID3D12CommandAllocator* _fgCommandAllocator[BUFFER_COUNT] {};
 

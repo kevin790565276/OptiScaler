@@ -570,6 +570,9 @@ void FSRFG_Dx12::CreateContext(ID3D12Device* device, FG_Constants& fgConstants)
         createFg.maxRenderSize = { fgConstants.displayWidth, fgConstants.displayHeight };
     }
 
+    _maxRenderWidth = createFg.maxRenderSize.width;
+    _maxRenderHeight = createFg.maxRenderSize.height;
+
     createFg.flags = 0;
 
     if (fgConstants.flags & FG_Flags::Hdr)
@@ -649,6 +652,13 @@ void FSRFG_Dx12::EvaluateState(ID3D12Device* device, FG_Constants& fgConstants)
             State::Instance().ClearCapturedHudlesses = true;
             Hudfix_Dx12::ResetCounters();
         }
+    }
+    else if (_maxRenderWidth != 0 && _maxRenderHeight != 0 && IsActive() && !IsPaused() &&
+             (fgConstants.displayWidth > _maxRenderWidth || fgConstants.displayHeight > _maxRenderHeight))
+
+    {
+        StopAndDestroyContext(true, false);
+        State::Instance().FGchanged = true;
     }
 
     if (State::Instance().FGchanged)
