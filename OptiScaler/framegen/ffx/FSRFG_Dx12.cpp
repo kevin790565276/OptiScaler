@@ -106,7 +106,9 @@ bool FSRFG_Dx12::Dispatch()
         LOG_TRACE("Using UI: {:X}", (size_t) uiColor->GetResource());
 
         uiDesc.uiResource = ffxApiGetResourceDX12(uiColor->GetResource(), GetFfxApiState(uiColor->state));
-        // uiDesc.flags = FFX_FRAMEGENERATION_UI_COMPOSITION_FLAG_USE_PREMUL_ALPHA;
+        
+        if (Config::Instance()->UIPremultipliedAlpha.value_or_default())
+            uiDesc.flags = FFX_FRAMEGENERATION_UI_COMPOSITION_FLAG_USE_PREMUL_ALPHA;
     }
     else if (hudless != nullptr && IsResourceReady(FG_ResourceType::HudlessColor))
     {

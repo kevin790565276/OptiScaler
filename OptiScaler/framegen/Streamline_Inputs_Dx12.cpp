@@ -54,6 +54,8 @@ bool Sl_Inputs_Dx12::setConstants(const sl::Constants& values, uint32_t frameId)
             memcpy(&data, &values, sizeof(values) - sizeof(sl::Constants::minRelativeLinearDepthObjectSeparation));
             data.value().structVersion = sl::kStructVersion2;
             data.value().next = pNext;
+            
+            return true;
         }
     }
 

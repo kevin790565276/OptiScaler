@@ -350,6 +350,7 @@ class Config
     CustomOptional<FGInput> FGInput { FGInput::NoFG };
     CustomOptional<FGOutput> FGOutput { FGOutput::NoFG };
     CustomOptional<bool> DrawUIOverFG { false };
+    CustomOptional<bool> UIPremultipliedAlpha { true };
 
     // OptiFG
     CustomOptional<bool> FGEnabled { false };

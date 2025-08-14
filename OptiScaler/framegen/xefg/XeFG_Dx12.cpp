@@ -279,6 +279,9 @@ bool XeFG_Dx12::CreateSwapchain(IDXGIFactory* factory, ID3D12CommandQueue* cmdQu
     if (Config::Instance()->FGXeFGHighResMV.value_or_default())
         params.initFlags |= XEFG_SWAPCHAIN_INIT_FLAG_HIGH_RES_MV;
 
+    if (!Config::Instance()->UIPremultipliedAlpha.value_or_default())
+        params.initFlags |= XEFG_SWAPCHAIN_INIT_FLAG_UITEXTURE_NOT_PREMUL_ALPHA;
+
     LOG_DEBUG("Inverted Depth: {}", Config::Instance()->FGXeFGDepthInverted.value_or_default());
     LOG_DEBUG("Jittered Velocity: {}", Config::Instance()->FGXeFGJitteredMV.value_or_default());
     LOG_DEBUG("High Res MV: {}", Config::Instance()->FGXeFGHighResMV.value_or_default());
@@ -352,6 +355,9 @@ bool XeFG_Dx12::CreateSwapchain1(IDXGIFactory* factory, ID3D12CommandQueue* cmdQ
 
     if (Config::Instance()->FGXeFGHighResMV.value_or_default())
         params.initFlags |= XEFG_SWAPCHAIN_INIT_FLAG_HIGH_RES_MV;
+
+    if (!Config::Instance()->UIPremultipliedAlpha.value_or_default())
+        params.initFlags |= XEFG_SWAPCHAIN_INIT_FLAG_UITEXTURE_NOT_PREMUL_ALPHA;
 
     LOG_DEBUG("Inverted Depth: {}", Config::Instance()->FGXeFGDepthInverted.value_or_default());
     LOG_DEBUG("Jittered Velocity: {}", Config::Instance()->FGXeFGJitteredMV.value_or_default());
@@ -437,7 +443,7 @@ bool XeFG_Dx12::Dispatch()
 
     xefg_swapchain_frame_constant_data_t constData = {};
 
-    if (_cameraPosition[0] != 0.0 || _cameraPosition[1] != 0.0 || _cameraPosition[2] != 0.0)
+    if (_cameraPosition[0] != 0.0f || _cameraPosition[1] != 0.0f || _cameraPosition[2] != 0.0f)
     {
         XMVECTOR right = XMLoadFloat3(reinterpret_cast<const XMFLOAT3*>(_cameraRight));
         XMVECTOR up = XMLoadFloat3(reinterpret_cast<const XMFLOAT3*>(_cameraUp));
@@ -465,6 +471,10 @@ bool XeFG_Dx12::Dispatch()
     {
         auto projectionMatrix = XMMatrixPerspectiveFovLH(_cameraVFov, _cameraAspectRatio, _cameraNear, _cameraFar);
         memcpy(constData.projectionMatrix, projectionMatrix.r, sizeof(projectionMatrix));
+    }
+    else
+    {
+        LOG_WARN("Can't calculate projectionMatrix");
     }
 
     constData.jitterOffsetX = _jitterX;
@@ -633,6 +643,8 @@ void XeFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmd
     // We usually don't copy any resources for XeFG, the ones with this tag are the exception
     if (cmdList != nullptr && fResource->validity == FG_ResourceValidity::ValidButMakeCopy)
     {
+        LOG_DEBUG("Making a resource copy of: {}", magic_enum::enum_name(type));
+
         ID3D12Resource* copyOutput = nullptr;
 
         if (_resourceCopy[fIndex].contains(type))

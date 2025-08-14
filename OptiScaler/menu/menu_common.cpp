@@ -3323,6 +3323,12 @@ bool MenuCommon::RenderMenu()
                             if (bool drawUIOverFG = Config::Instance()->DrawUIOverFG.value_or_default();
                                 ImGui::Checkbox("Draw UI over FG", &drawUIOverFG))
                                 Config::Instance()->DrawUIOverFG = drawUIOverFG;
+
+                            ImGui::SameLine();
+
+                            if (bool uiPremultipliedAlpha = Config::Instance()->UIPremultipliedAlpha.value_or_default();
+                                ImGui::Checkbox("UI Premult. alpha", &uiPremultipliedAlpha))
+                                Config::Instance()->UIPremultipliedAlpha = uiPremultipliedAlpha;
                         }
                         else
                         {
