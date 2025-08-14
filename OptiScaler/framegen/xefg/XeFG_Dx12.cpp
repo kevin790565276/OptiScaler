@@ -490,6 +490,46 @@ bool XeFG_Dx12::Dispatch()
         return false;
     }
 
+    // Base
+    {
+        uint32_t left = 0;
+        uint32_t top = 0;
+
+        // use swapchain buffer info
+        DXGI_SWAP_CHAIN_DESC scDesc1 {};
+        if (State::Instance().currentSwapchain->GetDesc(&scDesc1) == S_OK)
+        {
+            LOG_DEBUG("SwapChain Res: {}x{}, Upscaler Display Res: {}x{}", scDesc1.BufferDesc.Width,
+                      scDesc1.BufferDesc.Height, _interpolationWidth, _interpolationHeight);
+
+            auto calculatedLeft = ((int) scDesc1.BufferDesc.Width - (int) _interpolationWidth) / 2;
+            if (calculatedLeft > 0)
+                left = Config::Instance()->FGRectLeft.value_or(calculatedLeft);
+
+            auto calculatedTop = ((int) scDesc1.BufferDesc.Height - (int) _interpolationHeight) / 2;
+            if (calculatedTop > 0)
+                top = Config::Instance()->FGRectTop.value_or(calculatedTop);
+        }
+        else
+        {
+            left = Config::Instance()->FGRectLeft.value_or(0);
+            top = Config::Instance()->FGRectTop.value_or(0);
+        }
+
+        xefg_swapchain_d3d12_resource_data_t backbuffer = {};
+        backbuffer.type = XEFG_SWAPCHAIN_RES_BACKBUFFER;
+        backbuffer.validity = XEFG_SWAPCHAIN_RV_UNTIL_NEXT_PRESENT;
+        backbuffer.resourceBase = { left, top };
+        backbuffer.resourceSize = { _interpolationWidth, _interpolationHeight };
+
+        auto result =
+            XeFGProxy::D3D12TagFrameResource()(_swapChainContext, (ID3D12CommandList*) 1, _frameCount, &backbuffer);
+        if (result != XEFG_SWAPCHAIN_RESULT_SUCCESS)
+        {
+            LOG_ERROR("D3D12TagFrameResource Backbuffer error: {} ({})", magic_enum::enum_name(result), (UINT) result);
+        }
+    }
+
     LOG_DEBUG("Result: Ok");
 
     return true;
@@ -679,25 +719,6 @@ void XeFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmd
     }
 
     SetResourceReady(type);
-
-    static uint64_t lastSetBackbufferFrameId = UINT64_MAX;
-    if (_frameCount != lastSetBackbufferFrameId &&
-        (type == FG_ResourceType::HudlessColor || type == FG_ResourceType::UIColor))
-    {
-        lastSetBackbufferFrameId = _frameCount;
-
-        xefg_swapchain_d3d12_resource_data_t backbuffer = {};
-        backbuffer.type = XEFG_SWAPCHAIN_RES_BACKBUFFER;
-        backbuffer.validity = XEFG_SWAPCHAIN_RV_UNTIL_NEXT_PRESENT;
-        backbuffer.resourceBase = resourceParam.resourceBase;
-        backbuffer.resourceSize = resourceParam.resourceSize;
-
-        auto result = XeFGProxy::D3D12TagFrameResource()(_swapChainContext, cmdList, _frameCount, &backbuffer);
-        if (result != XEFG_SWAPCHAIN_RESULT_SUCCESS)
-        {
-            LOG_ERROR("D3D12TagFrameResource Backbuffer error: {} ({})", magic_enum::enum_name(result), (UINT) result);
-        }
-    }
 
     LOG_TRACE("_frameResources[{}][{}]: {:X}", fIndex, magic_enum::enum_name(type), (size_t) fResource->GetResource());
 }
