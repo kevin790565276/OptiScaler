@@ -115,7 +115,7 @@ typedef struct HeapInfo
         info[index] = setInfo;
 
         {
-            _trMutex.lock();
+            std::scoped_lock lock(_trMutex);
 
             if (_trackedResources.contains(setInfo.buffer))
                 _trackedResources[setInfo.buffer].push_back(&info[index]);
@@ -124,8 +124,6 @@ typedef struct HeapInfo
 
             LOG_TRACK("Add resource: {:X} to info: {:X}, Res: {}x{}", (size_t) setInfo.buffer, (size_t) &info[index],
                       setInfo.width, setInfo.height);
-
-            _trMutex.unlock();
         }
     }
 
@@ -143,7 +141,7 @@ typedef struct HeapInfo
         info[index] = setInfo;
 
         {
-            _trMutex.lock();
+            std::scoped_lock lock(_trMutex);
 
             if (_trackedResources.contains(setInfo.buffer))
                 _trackedResources[setInfo.buffer].push_back(&info[index]);
@@ -152,8 +150,6 @@ typedef struct HeapInfo
 
             LOG_TRACK("Add resource: {:X} to info: {:X}, Res: {}x{}", (size_t) setInfo.buffer, (size_t) &info[index],
                       setInfo.width, setInfo.height);
-
-            _trMutex.unlock();
         }
     }
 
@@ -164,10 +160,10 @@ typedef struct HeapInfo
         if (index >= numDescriptors)
             return;
 
-        _trMutex.lock();
-
         if (info[index].buffer != nullptr)
         {
+            std::scoped_lock lock(_trMutex);
+
             LOG_TRACK("Resource: {:X}, Res: {}x{}", (size_t) info[index].buffer, info[index].width, info[index].height);
 
             if (_trackedResources.contains(info[index].buffer))
@@ -185,8 +181,6 @@ typedef struct HeapInfo
                 }
             }
         }
-
-        _trMutex.unlock();
 
         info[index].buffer = nullptr;
         info[index].lastUsedFrame = 0;
@@ -199,10 +193,10 @@ typedef struct HeapInfo
         if (index >= numDescriptors)
             return;
 
-        _trMutex.lock();
-
         if (info[index].buffer != nullptr)
         {
+            std::scoped_lock lock(_trMutex);
+
             LOG_TRACK("Resource: {:X}, Res: {}x{}", (size_t) info[index].buffer, info[index].width, info[index].height);
 
             if (_trackedResources.contains(info[index].buffer))
@@ -220,8 +214,6 @@ typedef struct HeapInfo
                 }
             }
         }
-
-        _trMutex.unlock();
 
         info[index].buffer = nullptr;
         info[index].lastUsedFrame = 0;
