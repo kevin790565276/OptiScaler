@@ -10,6 +10,11 @@
 * Added handling of XESS_INIT_FLAG_RESPONSIVE_PIXEL_MASK flag
 * Added RDNA4 checks after dxgi.dll loaded
 * Add KCD2 'Win64MasterMasterSteamPGO' path for search
+* Fix reactive mask flag for XeSS
+* Rename ImGui class names to our unique class to prevent conflicts
+* Fix FFX VK transparency & reactive inputs
+* Add reactive mask support from FSR inputs to FSR upscalers
+* Backported Show Detected UI
 
 ## v0.7.7-pre13
 * More game quirks added
