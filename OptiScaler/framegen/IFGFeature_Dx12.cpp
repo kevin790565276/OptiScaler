@@ -12,9 +12,11 @@ bool IFGFeature_Dx12::GetResourceCopy(FG_ResourceType type, D3D12_RESOURCE_STATE
 
     auto resource = GetResource(type);
 
-    // TODO: add some warning
-    if (resource->copy == nullptr)
+    if (resource->copy == nullptr && resource->validity == FG_ResourceValidity::ValidNow)
+    {
+        LOG_WARN("No resource copy of type {} to use", magic_enum::enum_name(type));
         return false;
+    }
 
     auto result = _copyCommandAllocator->Reset();
     if (result != S_OK)
@@ -24,7 +26,7 @@ bool IFGFeature_Dx12::GetResourceCopy(FG_ResourceType type, D3D12_RESOURCE_STATE
     if (result != S_OK)
         return false;
 
-    _copyCommandList->CopyResource(output, resource->copy);
+    _copyCommandList->CopyResource(output, resource->GetResource());
 
     _copyCommandList->Close();
     ID3D12CommandList* commandList = _copyCommandList;
