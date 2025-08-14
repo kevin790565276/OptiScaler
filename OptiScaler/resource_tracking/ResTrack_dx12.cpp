@@ -1717,23 +1717,27 @@ void ResTrack_Dx12::HookCommandList(ID3D12Device* InDevice)
                 DetourTransactionBegin();
                 DetourUpdateThread(GetCurrentThread());
 
-                if (o_OMSetRenderTargets != nullptr)
-                    DetourAttach(&(PVOID&) o_OMSetRenderTargets, hkOMSetRenderTargets);
+                // Only needed for hudfix
+                if (State::Instance().activeFgInput == FGInput::Upscaler)
+                {
+                    if (o_OMSetRenderTargets != nullptr)
+                        DetourAttach(&(PVOID&) o_OMSetRenderTargets, hkOMSetRenderTargets);
 
-                if (o_SetGraphicsRootDescriptorTable != nullptr)
-                    DetourAttach(&(PVOID&) o_SetGraphicsRootDescriptorTable, hkSetGraphicsRootDescriptorTable);
+                    if (o_SetGraphicsRootDescriptorTable != nullptr)
+                        DetourAttach(&(PVOID&) o_SetGraphicsRootDescriptorTable, hkSetGraphicsRootDescriptorTable);
 
-                if (o_SetComputeRootDescriptorTable != nullptr)
-                    DetourAttach(&(PVOID&) o_SetComputeRootDescriptorTable, hkSetComputeRootDescriptorTable);
+                    if (o_SetComputeRootDescriptorTable != nullptr)
+                        DetourAttach(&(PVOID&) o_SetComputeRootDescriptorTable, hkSetComputeRootDescriptorTable);
 
-                if (o_DrawIndexedInstanced != nullptr)
-                    DetourAttach(&(PVOID&) o_DrawIndexedInstanced, hkDrawIndexedInstanced);
+                    if (o_DrawIndexedInstanced != nullptr)
+                        DetourAttach(&(PVOID&) o_DrawIndexedInstanced, hkDrawIndexedInstanced);
 
-                if (o_DrawInstanced != nullptr)
-                    DetourAttach(&(PVOID&) o_DrawInstanced, hkDrawInstanced);
+                    if (o_DrawInstanced != nullptr)
+                        DetourAttach(&(PVOID&) o_DrawInstanced, hkDrawInstanced);
 
-                if (o_Dispatch != nullptr)
-                    DetourAttach(&(PVOID&) o_Dispatch, hkDispatch);
+                    if (o_Dispatch != nullptr)
+                        DetourAttach(&(PVOID&) o_Dispatch, hkDispatch);
+                }
 
                 if (o_ExecuteBundle != nullptr)
                     DetourAttach(&(PVOID&) o_ExecuteBundle, hkExecuteBundle);
@@ -1848,7 +1852,10 @@ void ResTrack_Dx12::HookDevice(ID3D12Device* device)
 
     HookToQueue(device);
     HookCommandList(device);
-    HookResource(device);
+
+    // Only needed for hudfix
+    if (State::Instance().activeFgInput == FGInput::Upscaler)
+        HookResource(device);
 }
 
 void ResTrack_Dx12::ClearPossibleHudless()
