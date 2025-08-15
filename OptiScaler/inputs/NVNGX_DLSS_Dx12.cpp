@@ -1626,22 +1626,26 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D12_EvaluateFeature(ID3D12GraphicsCom
 
         if (paramVelocity != nullptr)
         {
+            Dx12Resource setResource {};
+            setResource.type = FG_ResourceType::Velocity;
+            setResource.cmdList = commandList;
+            setResource.resource = paramVelocity;
+            setResource.state = (D3D12_RESOURCE_STATES) Config::Instance()->MVResourceBarrier.value_or(
+                D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+            setResource.validity = FG_ResourceValidity::ValidNow;
+
             if (deviceContext->feature->LowResMV())
             {
-                fg->SetResource(FG_ResourceType::Velocity, commandList, paramVelocity,
-                                deviceContext->feature->RenderWidth(), deviceContext->feature->RenderHeight(),
-                                (D3D12_RESOURCE_STATES) Config::Instance()->MVResourceBarrier.value_or(
-                                    D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE),
-                                FG_ResourceValidity::ValidNow);
+                setResource.width = deviceContext->feature->RenderWidth();
+                setResource.height = deviceContext->feature->RenderHeight();
             }
             else
             {
-                fg->SetResource(FG_ResourceType::Velocity, commandList, paramVelocity,
-                                deviceContext->feature->DisplayWidth(), deviceContext->feature->DisplayHeight(),
-                                (D3D12_RESOURCE_STATES) Config::Instance()->MVResourceBarrier.value_or(
-                                    D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE),
-                                FG_ResourceValidity::ValidNow);
+                setResource.width = deviceContext->feature->DisplayWidth();
+                setResource.height = deviceContext->feature->DisplayHeight();
             }
+
+            fg->SetResource(&setResource);
         }
 
         ID3D12Resource* paramDepth = nullptr;
@@ -1667,21 +1671,37 @@ NVSDK_NGX_API NVSDK_NGX_Result NVSDK_NGX_D3D12_EvaluateFeature(ID3D12GraphicsCom
                     if (DepthScale->Dispatch(D3D12Device, InCmdList, paramDepth, DepthScale->Buffer()))
                     {
                         DepthScale->SetBufferState(InCmdList, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-                        fg->SetResource(FG_ResourceType::Depth, commandList, DepthScale->Buffer(),
-                                        deviceContext->feature->RenderWidth(), deviceContext->feature->RenderHeight(),
-                                        D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-                                        FG_ResourceValidity::UntilPresent);
+
+                        Dx12Resource setResource {};
+                        setResource.type = FG_ResourceType::Depth;
+                        setResource.cmdList = commandList;
+                        setResource.resource = DepthScale->Buffer();
+                        setResource.width = deviceContext->feature->RenderWidth();
+                        setResource.height = deviceContext->feature->RenderHeight();
+                        setResource.state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+                        setResource.validity = FG_ResourceValidity::UntilPresent;
+
+                        fg->SetResource(&setResource);
+
                         done = true;
                     }
                 }
             }
 
             if (!done)
-                fg->SetResource(FG_ResourceType::Depth, commandList, paramDepth, deviceContext->feature->RenderWidth(),
-                                deviceContext->feature->RenderHeight(),
-                                (D3D12_RESOURCE_STATES) Config::Instance()->DepthResourceBarrier.value_or(
-                                    D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE),
-                                FG_ResourceValidity::ValidNow);
+            {
+                Dx12Resource setResource {};
+                setResource.type = FG_ResourceType::Depth;
+                setResource.cmdList = commandList;
+                setResource.resource = paramDepth;
+                setResource.width = deviceContext->feature->RenderWidth();
+                setResource.height = deviceContext->feature->RenderHeight();
+                setResource.state = (D3D12_RESOURCE_STATES) Config::Instance()->DepthResourceBarrier.value_or(
+                    D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+                setResource.validity = FG_ResourceValidity::ValidNow;
+
+                fg->SetResource(&setResource);
+            }
         }
 
 #ifdef USE_COPY_QUEUE_FOR_FG

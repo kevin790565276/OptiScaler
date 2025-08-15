@@ -106,7 +106,7 @@ bool FSRFG_Dx12::Dispatch()
         LOG_TRACE("Using UI: {:X}", (size_t) uiColor->GetResource());
 
         uiDesc.uiResource = ffxApiGetResourceDX12(uiColor->GetResource(), GetFfxApiState(uiColor->state));
-        
+
         if (Config::Instance()->UIPremultipliedAlpha.value_or_default())
             uiDesc.flags = FFX_FRAMEGENERATION_UI_COMPOSITION_FLAG_USE_PREMUL_ALPHA;
     }
@@ -722,13 +722,14 @@ bool FSRFG_Dx12::ExecuteCommandList()
     return false;
 }
 
-void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* resource,
-                             UINT width, UINT height, D3D12_RESOURCE_STATES state, FG_ResourceValidity validity)
+void FSRFG_Dx12::SetResource(Dx12Resource* inputResource)
 {
-    if (resource == nullptr)
+    if (inputResource == nullptr || inputResource->resource == nullptr)
         return;
 
-    if (cmdList == nullptr && validity == FG_ResourceValidity::ValidNow)
+    auto& type = inputResource->type;
+
+    if (inputResource->cmdList == nullptr && inputResource->validity == FG_ResourceValidity::ValidNow)
     {
         LOG_ERROR("{}, validity == ValidNow but cmdList is nullptr!", magic_enum::enum_name(type));
         return;
@@ -738,12 +739,12 @@ void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cm
     _frameResources[fIndex][type] = {};
     auto fResource = &_frameResources[fIndex][type];
     fResource->type = type;
-    fResource->state = state;
-    fResource->validity = validity;
-    fResource->resource = resource;
-    fResource->width = width;
-    fResource->height = height;
-    fResource->cmdList = cmdList;
+    fResource->state = inputResource->state;
+    fResource->validity = inputResource->validity;
+    fResource->resource = inputResource->resource;
+    fResource->width = inputResource->width;
+    fResource->height = inputResource->height;
+    fResource->cmdList = inputResource->cmdList;
 
     auto willFlip = State::Instance().activeFgInput == FGInput::Upscaler &&
                     Config::Instance()->FGResourceFlip.value_or_default() &&
@@ -778,7 +779,7 @@ void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cm
         if (_resourceCopy[fIndex].contains(type))
             copyOutput = _resourceCopy[fIndex][type];
 
-        if (!CopyResource(cmdList, resource, &copyOutput, state))
+        if (!CopyResource(inputResource->cmdList, inputResource->resource, &copyOutput, inputResource->state))
         {
             LOG_ERROR("{}, CopyResource error!", magic_enum::enum_name(type));
             return;
@@ -791,14 +792,9 @@ void FSRFG_Dx12::SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cm
     }
 
     if (fResource->validity == FG_ResourceValidity::UntilPresent)
-    {
         SetResourceReady(type);
-    }
     else
-    {
-        fResource->cmdList = cmdList;
-        ResTrack_Dx12::SetResourceCmdList(type, cmdList);
-    }
+        ResTrack_Dx12::SetResourceCmdList(type, inputResource->cmdList);
 
     LOG_TRACE("_frameResources[{}][{}]: {:X}", fIndex, magic_enum::enum_name(type), (size_t) fResource->GetResource());
 }

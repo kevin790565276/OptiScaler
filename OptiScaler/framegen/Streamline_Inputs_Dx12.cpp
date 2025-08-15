@@ -54,7 +54,7 @@ bool Sl_Inputs_Dx12::setConstants(const sl::Constants& values, uint32_t frameId)
             memcpy(&data, &values, sizeof(values) - sizeof(sl::Constants::minRelativeLinearDepthObjectSeparation));
             data.value().structVersion = sl::kStructVersion2;
             data.value().next = pNext;
-            
+
             return true;
         }
     }
@@ -200,8 +200,16 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
             height = desc.Height;
         }
 
-        fgOutput->SetResource(FG_ResourceType::HudlessColor, cmdBuffer, hudlessResource, width, height,
-                              (D3D12_RESOURCE_STATES) tag.resource->state, validity);
+        Dx12Resource setResource {};
+        setResource.type = FG_ResourceType::HudlessColor;
+        setResource.cmdList = cmdBuffer;
+        setResource.resource = hudlessResource;
+        setResource.width = width;
+        setResource.height = height;
+        setResource.state = (D3D12_RESOURCE_STATES) tag.resource->state;
+        setResource.validity = validity;
+
+        fgOutput->SetResource(&setResource);
 
         // Assume hudless is the size used for interpolation
         interpolationWidth = width;
@@ -241,8 +249,16 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
         const auto validity =
             (tag.lifecycle != sl::eOnlyValidNow) ? FG_ResourceValidity::UntilPresent : FG_ResourceValidity::ValidNow;
 
-        fgOutput->SetResource(FG_ResourceType::Depth, cmdBuffer, depthResource, width, height,
-                              (D3D12_RESOURCE_STATES) tag.resource->state, validity);
+        Dx12Resource setResource {};
+        setResource.type = FG_ResourceType::Depth;
+        setResource.cmdList = cmdBuffer;
+        setResource.resource = depthResource;
+        setResource.width = width;
+        setResource.height = height;
+        setResource.state = (D3D12_RESOURCE_STATES) tag.resource->state;
+        setResource.validity = validity;
+
+        fgOutput->SetResource(&setResource);
     }
     else if (tag.type == sl::kBufferTypeMotionVectors)
     {
@@ -268,8 +284,16 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
         const auto validity =
             (tag.lifecycle != sl::eOnlyValidNow) ? FG_ResourceValidity::UntilPresent : FG_ResourceValidity::ValidNow;
 
-        fgOutput->SetResource(FG_ResourceType::Velocity, cmdBuffer, mvResource, width, height,
-                              (D3D12_RESOURCE_STATES) tag.resource->state, validity);
+        Dx12Resource setResource {};
+        setResource.type = FG_ResourceType::Velocity;
+        setResource.cmdList = cmdBuffer;
+        setResource.resource = mvResource;
+        setResource.width = width;
+        setResource.height = height;
+        setResource.state = (D3D12_RESOURCE_STATES) tag.resource->state;
+        setResource.validity = validity;
+
+        fgOutput->SetResource(&setResource);
     }
     else if (tag.type == sl::kBufferTypeUIColorAndAlpha)
     {
@@ -294,8 +318,16 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
             const auto validity = (tag.lifecycle != sl::eOnlyValidNow) ? FG_ResourceValidity::UntilPresent
                                                                        : FG_ResourceValidity::ValidNow;
 
-            fgOutput->SetResource(FG_ResourceType::UIColor, cmdBuffer, uiResource, width, height,
-                                  (D3D12_RESOURCE_STATES) tag.resource->state, validity);
+            Dx12Resource setResource {};
+            setResource.type = FG_ResourceType::UIColor;
+            setResource.cmdList = cmdBuffer;
+            setResource.resource = uiResource;
+            setResource.width = width;
+            setResource.height = height;
+            setResource.state = (D3D12_RESOURCE_STATES) tag.resource->state;
+            setResource.validity = validity;
+
+            fgOutput->SetResource(&setResource);
         }
     }
     else if (tag.type == sl::kBufferTypeBidirectionalDistortionField)
@@ -319,8 +351,16 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
         const auto validity =
             (tag.lifecycle != sl::eOnlyValidNow) ? FG_ResourceValidity::UntilPresent : FG_ResourceValidity::ValidNow;
 
-        fgOutput->SetResource(FG_ResourceType::Distortion, cmdBuffer, distortionFieldResource, width, height,
-                              (D3D12_RESOURCE_STATES) tag.resource->state, validity);
+        Dx12Resource setResource {};
+        setResource.type = FG_ResourceType::Distortion;
+        setResource.cmdList = cmdBuffer;
+        setResource.resource = distortionFieldResource;
+        setResource.width = width;
+        setResource.height = height;
+        setResource.state = (D3D12_RESOURCE_STATES) tag.resource->state;
+        setResource.validity = validity;
+
+        fgOutput->SetResource(&setResource);
     }
 
     return true;

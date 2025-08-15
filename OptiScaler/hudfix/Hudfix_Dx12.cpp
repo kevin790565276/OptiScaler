@@ -696,9 +696,18 @@ bool Hudfix_Dx12::CheckForHudless(std::string callerName, ID3D12GraphicsCommandL
                 auto fg = reinterpret_cast<IFGFeature_Dx12*>(State::Instance().currentFG);
 
                 if (fg != nullptr)
-                    fg->SetResource(FG_ResourceType::HudlessColor, cmdList, _formatTransfer[fIndex]->Buffer(),
-                                    scDesc.BufferDesc.Width, scDesc.BufferDesc.Height,
-                                    D3D12_RESOURCE_STATE_UNORDERED_ACCESS, FG_ResourceValidity::JustTrackCmdlist);
+                {
+                    Dx12Resource setResource {};
+                    setResource.type = FG_ResourceType::HudlessColor;
+                    setResource.cmdList = cmdList;
+                    setResource.resource = _formatTransfer[fIndex]->Buffer();
+                    setResource.width = scDesc.BufferDesc.Width;
+                    setResource.height = scDesc.BufferDesc.Height;
+                    setResource.state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+                    setResource.validity = FG_ResourceValidity::JustTrackCmdlist;
+
+                    fg->SetResource(&setResource);
+                }
             }
             else
             {
@@ -716,9 +725,18 @@ bool Hudfix_Dx12::CheckForHudless(std::string callerName, ID3D12GraphicsCommandL
             auto fg = reinterpret_cast<IFGFeature_Dx12*>(State::Instance().currentFG);
 
             if (fg != nullptr)
-                fg->SetResource(FG_ResourceType::HudlessColor, cmdList, _captureBuffer[fIndex], scDesc.BufferDesc.Width,
-                                scDesc.BufferDesc.Height, D3D12_RESOURCE_STATE_COPY_DEST,
-                                FG_ResourceValidity::JustTrackCmdlist);
+            {
+                Dx12Resource setResource {};
+                setResource.type = FG_ResourceType::HudlessColor;
+                setResource.cmdList = cmdList;
+                setResource.resource = _captureBuffer[fIndex];
+                setResource.width = scDesc.BufferDesc.Width;
+                setResource.height = scDesc.BufferDesc.Height;
+                setResource.state = D3D12_RESOURCE_STATE_COPY_DEST;
+                setResource.validity = FG_ResourceValidity::JustTrackCmdlist;
+
+                fg->SetResource(&setResource);
+            }
         }
 
         if (State::Instance().FGcaptureResources)

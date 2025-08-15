@@ -16,10 +16,12 @@ typedef struct Dx12Resource
     ID3D12Resource* resource = nullptr;
     UINT width = 0;
     UINT height = 0;
-    ID3D12Resource* copy = nullptr;
-    ID3D12CommandList* cmdList = nullptr;
+    ID3D12GraphicsCommandList* cmdList = nullptr;
     D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COMMON;
     FG_ResourceValidity validity = FG_ResourceValidity::ValidNow;
+
+    // TODO: make private?
+    ID3D12Resource* copy = nullptr;
     UINT64 fenceValue = 0;
     bool waitingExecution = false;
 
@@ -81,8 +83,7 @@ class IFGFeature_Dx12 : public virtual IFGFeature
     Dx12Resource* GetResource(FG_ResourceType type);
     bool GetResourceCopy(FG_ResourceType type, D3D12_RESOURCE_STATES bufferState, ID3D12Resource* output);
 
-    virtual void SetResource(FG_ResourceType type, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* resource,
-                             UINT width, UINT height, D3D12_RESOURCE_STATES state, FG_ResourceValidity validity) = 0;
+    virtual void SetResource(Dx12Resource* inputResource) = 0;
 
     virtual void SetCommandQueue(FG_ResourceType type, ID3D12CommandQueue* queue) = 0;
 
