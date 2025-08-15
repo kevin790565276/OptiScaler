@@ -272,6 +272,8 @@ bool FSRFG_Dx12::Dispatch()
         if (State::Instance().currentFeature && State::Instance().activeFgInput == FGInput::Upscaler)
             dfgPrepare.renderSize = { State::Instance().currentFeature->RenderWidth(),
                                       State::Instance().currentFeature->RenderHeight() };
+        else if (depth != nullptr)
+            dfgPrepare.renderSize = { depth->width, depth->height };
         else
             dfgPrepare.renderSize = { dfgPrepare.depth.description.width, dfgPrepare.depth.description.height };
 

@@ -115,6 +115,7 @@ class IFGFeature
     void SetFrameTimeDelta(float delta);
     void SetReset(UINT reset);
     void SetInterpolationRect(UINT width, UINT height);
+    void GetInterpolationRect(UINT& width, UINT& height);
 
     void ResetCounters();
     void UpdateTarget();

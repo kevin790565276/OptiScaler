@@ -658,6 +658,35 @@ bool Hudfix_Dx12::CheckForHudless(std::string callerName, ID3D12GraphicsCommandL
             }
         }
 
+        auto fg = reinterpret_cast<IFGFeature_Dx12*>(State::Instance().currentFG);
+        UINT interpolationRectWidth, interpolationRectHeight = 0;
+        if (fg != nullptr)
+            fg->GetInterpolationRect(interpolationRectWidth, interpolationRectHeight);
+
+        uint32_t left = 0;
+        uint32_t top = 0;
+
+        // use swapchain buffer info
+        DXGI_SWAP_CHAIN_DESC scDesc1 {};
+        if (State::Instance().currentSwapchain->GetDesc(&scDesc1) == S_OK)
+        {
+            LOG_DEBUG("SwapChain Res: {}x{}, Upscaler Display Res: {}x{}", scDesc1.BufferDesc.Width,
+                      scDesc1.BufferDesc.Height, interpolationRectWidth, interpolationRectHeight);
+
+            auto calculatedLeft = ((int) scDesc1.BufferDesc.Width - (int) interpolationRectWidth) / 2;
+            if (calculatedLeft > 0)
+                left = Config::Instance()->FGRectLeft.value_or(calculatedLeft);
+
+            auto calculatedTop = ((int) scDesc1.BufferDesc.Height - (int) interpolationRectHeight) / 2;
+            if (calculatedTop > 0)
+                top = Config::Instance()->FGRectTop.value_or(calculatedTop);
+        }
+        else
+        {
+            left = Config::Instance()->FGRectLeft.value_or(0);
+            top = Config::Instance()->FGRectTop.value_or(0);
+        }
+
         // needs conversion?
         if (resource->format != scDesc.BufferDesc.Format)
         {
@@ -693,14 +722,14 @@ bool Hudfix_Dx12::CheckForHudless(std::string callerName, ID3D12GraphicsCommandL
 
                 LOG_TRACE("Using _formatTransfer->Buffer()");
 
-                auto fg = reinterpret_cast<IFGFeature_Dx12*>(State::Instance().currentFG);
-
                 if (fg != nullptr)
                 {
                     Dx12Resource setResource {};
                     setResource.type = FG_ResourceType::HudlessColor;
                     setResource.cmdList = cmdList;
                     setResource.resource = _formatTransfer[fIndex]->Buffer();
+                    setResource.left = left;
+                    setResource.top = top;
                     setResource.width = scDesc.BufferDesc.Width;
                     setResource.height = scDesc.BufferDesc.Height;
                     setResource.state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
@@ -722,7 +751,6 @@ bool Hudfix_Dx12::CheckForHudless(std::string callerName, ID3D12GraphicsCommandL
             // Will reset after FG dispatch
             _skipHudlessChecks = true;
             LOG_DEBUG("Using _captureBuffer");
-            auto fg = reinterpret_cast<IFGFeature_Dx12*>(State::Instance().currentFG);
 
             if (fg != nullptr)
             {
@@ -730,6 +758,8 @@ bool Hudfix_Dx12::CheckForHudless(std::string callerName, ID3D12GraphicsCommandL
                 setResource.type = FG_ResourceType::HudlessColor;
                 setResource.cmdList = cmdList;
                 setResource.resource = _captureBuffer[fIndex];
+                setResource.left = left;
+                setResource.top = top;
                 setResource.width = scDesc.BufferDesc.Width;
                 setResource.height = scDesc.BufferDesc.Height;
                 setResource.state = D3D12_RESOURCE_STATE_COPY_DEST;

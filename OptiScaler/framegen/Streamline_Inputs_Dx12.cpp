@@ -204,6 +204,8 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
         setResource.type = FG_ResourceType::HudlessColor;
         setResource.cmdList = cmdBuffer;
         setResource.resource = hudlessResource;
+        setResource.top = tag.extent.top;
+        setResource.left = tag.extent.left;
         setResource.width = width;
         setResource.height = height;
         setResource.state = (D3D12_RESOURCE_STATES) tag.resource->state;
@@ -253,6 +255,8 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
         setResource.type = FG_ResourceType::Depth;
         setResource.cmdList = cmdBuffer;
         setResource.resource = depthResource;
+        setResource.top = tag.extent.top;
+        setResource.left = tag.extent.left;
         setResource.width = width;
         setResource.height = height;
         setResource.state = (D3D12_RESOURCE_STATES) tag.resource->state;
@@ -288,6 +292,8 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
         setResource.type = FG_ResourceType::Velocity;
         setResource.cmdList = cmdBuffer;
         setResource.resource = mvResource;
+        setResource.top = tag.extent.top;
+        setResource.left = tag.extent.left;
         setResource.width = width;
         setResource.height = height;
         setResource.state = (D3D12_RESOURCE_STATES) tag.resource->state;
@@ -322,6 +328,8 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
             setResource.type = FG_ResourceType::UIColor;
             setResource.cmdList = cmdBuffer;
             setResource.resource = uiResource;
+            setResource.top = tag.extent.top;
+            setResource.left = tag.extent.left;
             setResource.width = width;
             setResource.height = height;
             setResource.state = (D3D12_RESOURCE_STATES) tag.resource->state;
@@ -355,6 +363,8 @@ bool Sl_Inputs_Dx12::reportResource(const sl::ResourceTag& tag, ID3D12GraphicsCo
         setResource.type = FG_ResourceType::Distortion;
         setResource.cmdList = cmdBuffer;
         setResource.resource = distortionFieldResource;
+        setResource.top = tag.extent.top;
+        setResource.left = tag.extent.left;
         setResource.width = width;
         setResource.height = height;
         setResource.state = (D3D12_RESOURCE_STATES) tag.resource->state;

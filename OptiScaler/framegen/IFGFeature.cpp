@@ -99,6 +99,12 @@ void IFGFeature::SetInterpolationRect(UINT width, UINT height)
     _interpolationHeight = height;
 }
 
+void IFGFeature::GetInterpolationRect(UINT& width, UINT& height)
+{
+    width = _interpolationWidth;
+    height = _interpolationHeight;
+}
+
 void IFGFeature::ResetCounters()
 {
     _frameCount = 0;

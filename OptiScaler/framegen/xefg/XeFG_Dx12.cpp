@@ -154,6 +154,7 @@ xefg_swapchain_d3d12_resource_data_t XeFG_Dx12::GetResourceData(FG_ResourceType 
                                  ? XEFG_SWAPCHAIN_RV_ONLY_NOW
                                  : XEFG_SWAPCHAIN_RV_UNTIL_NEXT_PRESENT;
 
+    resourceParam.resourceBase = { fResource->left, fResource->top };
     resourceParam.resourceSize = { fResource->width, fResource->height };
     resourceParam.pResource = fResource->GetResource();
     resourceParam.incomingState = fResource->state;
@@ -178,36 +179,6 @@ xefg_swapchain_d3d12_resource_data_t XeFG_Dx12::GetResourceData(FG_ResourceType 
     default:
         LOG_WARN("Unsupported resource type: {}", magic_enum::enum_name(type));
         return xefg_swapchain_d3d12_resource_data_t {};
-    }
-
-    if (type == FG_ResourceType::UIColor || type == FG_ResourceType::HudlessColor)
-    {
-        uint32_t left = 0;
-        uint32_t top = 0;
-
-        // use swapchain buffer info
-        DXGI_SWAP_CHAIN_DESC scDesc1 {};
-        if (State::Instance().currentSwapchain->GetDesc(&scDesc1) == S_OK)
-        {
-            LOG_DEBUG("SwapChain Res: {}x{}, Upscaler Display Res: {}x{}", scDesc1.BufferDesc.Width,
-                      scDesc1.BufferDesc.Height, _interpolationWidth, _interpolationHeight);
-
-            auto calculatedLeft = ((int) scDesc1.BufferDesc.Width - (int) _interpolationWidth) / 2;
-            if (calculatedLeft > 0)
-                left = Config::Instance()->FGRectLeft.value_or(calculatedLeft);
-
-            auto calculatedTop = ((int) scDesc1.BufferDesc.Height - (int) _interpolationHeight) / 2;
-            if (calculatedTop > 0)
-                top = Config::Instance()->FGRectTop.value_or(calculatedTop);
-        }
-        else
-        {
-            left = Config::Instance()->FGRectLeft.value_or(0);
-            top = Config::Instance()->FGRectTop.value_or(0);
-        }
-
-        resourceParam.resourceBase = { left, top };
-        resourceParam.resourceSize = { _interpolationWidth, _interpolationHeight };
     }
 
     return resourceParam;
@@ -438,8 +409,8 @@ bool XeFG_Dx12::Dispatch()
                                     Config::Instance()->FGXeFGDebugView.value_or_default(), nullptr);
     XeFGProxy::EnableDebugFeature()(_swapChainContext, XEFG_SWAPCHAIN_DEBUG_FEATURE_SHOW_ONLY_INTERPOLATION,
                                     State::Instance().FGonlyGenerated, nullptr);
-    XeFGProxy::EnableDebugFeature()(_swapChainContext, XEFG_SWAPCHAIN_DEBUG_FEATURE_PRESENT_FAILED_INTERPOLATION,
-                                    State::Instance().FGonlyGenerated, nullptr);
+    // XeFGProxy::EnableDebugFeature()(_swapChainContext, XEFG_SWAPCHAIN_DEBUG_FEATURE_PRESENT_FAILED_INTERPOLATION,
+    //                                 State::Instance().FGonlyGenerated, nullptr);
 
     xefg_swapchain_frame_constant_data_t constData = {};
 
@@ -464,6 +435,11 @@ bool XeFG_Dx12::Dispatch()
 
     if (Config::Instance()->FGXeFGDepthInverted.value_or_default())
         std::swap(_cameraNear, _cameraFar);
+
+    if (_infiniteDepth && _cameraFar > _cameraNear)
+        _cameraFar = INFINITE;
+    else if (_infiniteDepth && _cameraNear > _cameraFar)
+        _cameraNear = INFINITE;
 
     // Cyberpunk seems to be sending LH so do the same
     // it also sends some extra data in usually empty spots but no idea what that is
@@ -509,7 +485,7 @@ bool XeFG_Dx12::Dispatch()
         DXGI_SWAP_CHAIN_DESC scDesc1 {};
         if (State::Instance().currentSwapchain->GetDesc(&scDesc1) == S_OK)
         {
-            LOG_DEBUG("SwapChain Res: {}x{}, Upscaler Display Res: {}x{}", scDesc1.BufferDesc.Width,
+            LOG_DEBUG("SwapChain Res: {}x{}, Interpolation Res: {}x{}", scDesc1.BufferDesc.Width,
                       scDesc1.BufferDesc.Height, _interpolationWidth, _interpolationHeight);
 
             auto calculatedLeft = ((int) scDesc1.BufferDesc.Width - (int) _interpolationWidth) / 2;
@@ -556,14 +532,7 @@ void XeFG_Dx12::EvaluateState(ID3D12Device* device, FG_Constants& fgConstants)
     if (!Config::Instance()->OverlayMenu.value_or_default())
         return;
 
-    static bool lastInfiniteDepth = false;
-    bool currentInfiniteDepth = static_cast<bool>(fgConstants.flags & FG_Flags::InfiniteDepth);
-    if (lastInfiniteDepth != currentInfiniteDepth)
-    {
-        lastInfiniteDepth = currentInfiniteDepth;
-        LOG_DEBUG("Infinite Depth changed: {}", currentInfiniteDepth);
-        State::Instance().FGchanged = true;
-    }
+    _infiniteDepth = static_cast<bool>(fgConstants.flags & FG_Flags::InfiniteDepth);
 
     if (!State::Instance().FGchanged && Config::Instance()->FGEnabled.value_or_default() && !IsPaused() &&
         XeFGProxy::InitXeFG() && _fgContext == nullptr && HooksDx::CurrentSwapchainFormat() != DXGI_FORMAT_UNKNOWN)
@@ -667,6 +636,8 @@ void XeFG_Dx12::SetResource(Dx12Resource* inputResource)
     fResource->state = inputResource->state;
     fResource->validity = inputResource->validity;
     fResource->resource = inputResource->resource;
+    fResource->top = inputResource->top;
+    fResource->left = inputResource->left;
     fResource->width = inputResource->width;
     fResource->height = inputResource->height;
     fResource->cmdList = inputResource->cmdList;
