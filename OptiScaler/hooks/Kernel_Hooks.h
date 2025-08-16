@@ -53,6 +53,7 @@ class KernelHooks
     inline static Kernel32Proxy::PFN_LoadLibraryExW o_K32_LoadLibraryExW = nullptr;
     inline static Kernel32Proxy::PFN_GetProcAddress o_K32_GetProcAddress = nullptr;
     inline static Kernel32Proxy::PFN_GetModuleHandleA o_K32_GetModuleHandleA = nullptr;
+    inline static Kernel32Proxy::PFN_GetModuleHandleExW o_K32_GetModuleHandleExW = nullptr;
     inline static Kernel32Proxy::PFN_GetFileAttributesW o_K32_GetFileAttributesW = nullptr;
     inline static Kernel32Proxy::PFN_CreateFileW o_K32_CreateFileW = nullptr;
 
@@ -902,7 +903,7 @@ class KernelHooks
     {
         HMODULE nvapi = nullptr;
 
-        if (Config::Instance()->NvapiDllPath.has_value())
+        if (Config::Instance()->OverrideNvapiDll.value_or_default() && Config::Instance()->NvapiDllPath.has_value())
         {
             nvapi = KernelBaseProxy::LoadLibraryExW_()(Config::Instance()->NvapiDllPath->c_str(), NULL, 0);
 
@@ -913,7 +914,7 @@ class KernelHooks
             }
         }
 
-        if (nvapi == nullptr)
+        if (Config::Instance()->OverrideNvapiDll.value_or_default() && nvapi == nullptr)
         {
             auto localPath = Util::DllPath().parent_path() / L"nvapi64.dll";
             nvapi = KernelBaseProxy::LoadLibraryExW_()(localPath.wstring().c_str(), NULL, 0);
@@ -931,7 +932,7 @@ class KernelHooks
 
             if (nvapi != nullptr)
             {
-                LOG_WARN("nvapi64.dll loaded from system!");
+                LOG_INFO("nvapi64.dll loaded from system!");
                 return nvapi;
             }
         }
@@ -1741,6 +1742,19 @@ class KernelHooks
         return o_K32_GetModuleHandleA(lpModuleName);
     }
 
+    static BOOL hk_K32_GetModuleHandleExW(DWORD dwFlags, LPCWSTR lpModuleName, HMODULE* phModule)
+    {
+        if (lpModuleName && dwFlags == GET_MODULE_HANDLE_EX_FLAG_PIN && lstrcmpW(L"nvapi64.dll", lpModuleName) == 0 &&
+            phModule)
+        {
+            LOG_TRACE("Suspected SpecialK call for nvapi64");
+            *phModule = LoadNvApi();
+            return true;
+        }
+
+        return o_K32_GetModuleHandleExW(dwFlags, lpModuleName, phModule);
+    }
+
     static FARPROC hk_KB_GetProcAddress(HMODULE hModule, LPCSTR lpProcName)
     {
         if ((size_t) lpProcName < 0x000000000000F000)
@@ -1858,6 +1872,7 @@ class KernelHooks
         o_K32_LoadLibraryExW = Kernel32Proxy::Hook_LoadLibraryExW(hk_K32_LoadLibraryExW);
         o_K32_GetProcAddress = Kernel32Proxy::Hook_GetProcAddress(hk_K32_GetProcAddress);
         o_K32_GetModuleHandleA = Kernel32Proxy::Hook_GetModuleHandleA(hk_K32_GetModuleHandleA);
+        o_K32_GetModuleHandleExW = Kernel32Proxy::Hook_GetModuleHandleExW(hk_K32_GetModuleHandleExW);
         o_K32_GetFileAttributesW = Kernel32Proxy::Hook_GetFileAttributesW(hk_K32_GetFileAttributesW);
         o_K32_CreateFileW = Kernel32Proxy::Hook_CreateFileW(hk_K32_CreateFileW);
     }

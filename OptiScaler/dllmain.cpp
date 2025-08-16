@@ -1192,6 +1192,10 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
             spdlog::info("OverrideNvapiDll not set, setting it to: {}",
                          !State::Instance().isRunningOnNvidia ? "true" : "false");
             Config::Instance()->OverrideNvapiDll.set_volatile_value(!State::Instance().isRunningOnNvidia);
+
+            // Try to load fakenvapi.dll as the main nvapi if not on Nvidia
+            if (!State::Instance().isRunningOnNvidia && !Config::Instance()->NvapiDllPath.has_value())
+                Config::Instance()->NvapiDllPath.set_volatile_value(L"fakenvapi.dll");
         }
 
         // Check for working mode and attach hooks
