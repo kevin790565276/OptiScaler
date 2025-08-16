@@ -79,6 +79,8 @@ void IFGFeature::SetCameraValues(float nearValue, float farValue, float vFov, fl
     _cameraVFov = vFov;
     _cameraAspectRatio = aspectRatio;
     _meterFactor = meterFactor;
+
+    LOG_TRACE("farValue: {}, nearValue: {}, vFov: {}, aspectRatio: {}", farValue, nearValue, vFov, aspectRatio);
 }
 
 void IFGFeature::SetCameraData(float cameraPosition[3], float cameraUp[3], float cameraRight[3], float cameraForward[3])

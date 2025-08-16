@@ -447,12 +447,18 @@ bool Sl_Inputs_Dx12::dispatchFG()
         return true;
     };
 
-    LOG_TRACE("Pre camera recalc near: {}, far: {}", slConstsRef.cameraNear, slConstsRef.cameraFar);
+    static bool dontRecalc = false;
+
+    LOG_TRACE("Camera from SL pre recalc near: {}, far: {}", slConstsRef.cameraNear, slConstsRef.cameraFar);
 
     // UE seems to not be passing the correct cameraViewToClip
     // and we can't use it to calculate cameraNear and cameraFar.
-    if (engineType != sl::EngineType::eUnreal)
+    if (engineType != sl::EngineType::eUnreal && !dontRecalc)
         loadCameraMatrix();
+
+    // Workaround for more games with broken cameraViewToClip
+    if (!dontRecalc && (slConstsRef.cameraNear < 0.0f || slConstsRef.cameraFar < 0.0f))
+        dontRecalc = true;
 
     infiniteDepth = false;
     if (slConstsRef.cameraNear != 0.0f && slConstsRef.cameraFar == 0.0f)
@@ -464,8 +470,6 @@ bool Sl_Inputs_Dx12::dispatchFG()
         infiniteDepth = true;
         slConstsRef.cameraFar = slConstsRef.cameraNear + 1.0f;
     }
-
-    LOG_TRACE("Post camera recalc near: {}, far: {}", slConstsRef.cameraNear, slConstsRef.cameraFar);
 
     fgOutput->SetCameraValues(slConstsRef.cameraNear, slConstsRef.cameraFar, slConstsRef.cameraFOV,
                               slConstsRef.cameraAspectRatio, 0.0f);
