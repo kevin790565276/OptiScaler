@@ -473,6 +473,23 @@ static void CheckWorkingMode()
         }
 
         // optiscaler.dll
+        if (lCaseFilename == "optiscaler.dll")
+        {
+            LOG_INFO("OptiScaler working as OptiScaler.dll");
+
+            // quick hack for testing
+            originalModule = dllModule;
+
+            dllNames.push_back("optiscaler.dll");
+            dllNames.push_back("optiscaler");
+            dllNamesW.push_back(L"optiscaler.dll");
+            dllNamesW.push_back(L"optiscaler");
+
+            modeFound = true;
+            break;
+        }
+
+        // optiscaler.asi
         if (lCaseFilename == "optiscaler.asi")
         {
             LOG_INFO("OptiScaler working as OptiScaler.asi");
