@@ -453,7 +453,7 @@ HRESULT IFeature_Dx11wDx12::CreateDx12Device(D3D_FEATURE_LEVEL InFeatureLevel)
         }
     }
 
-    if (Dx12CommandList[0] == nullptr)
+    if (Dx12CommandList[0] == nullptr && Dx12CommandAllocator[0] != nullptr)
     {
         // CreateCommandList
         result = State::Instance().currentD3D12Device->CreateCommandList(
@@ -466,9 +466,11 @@ HRESULT IFeature_Dx11wDx12::CreateDx12Device(D3D_FEATURE_LEVEL InFeatureLevel)
             State::Instance().skipSpoofing = false;
             return E_NOINTERFACE;
         }
+
+        Dx12CommandList[0]->Close();
     }
 
-    if (Dx12CommandList[1] == nullptr)
+    if (Dx12CommandList[1] == nullptr && Dx12CommandAllocator[1] != nullptr)
     {
         // CreateCommandList
         result = State::Instance().currentD3D12Device->CreateCommandList(
@@ -481,6 +483,8 @@ HRESULT IFeature_Dx11wDx12::CreateDx12Device(D3D_FEATURE_LEVEL InFeatureLevel)
             State::Instance().skipSpoofing = false;
             return E_NOINTERFACE;
         }
+
+        Dx12CommandList[1]->Close();
     }
 
     if (Dx12Fence == nullptr)
