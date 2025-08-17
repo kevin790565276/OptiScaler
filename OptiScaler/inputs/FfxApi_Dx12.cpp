@@ -516,6 +516,14 @@ ffxReturnCode_t ffxQuery_Dx12(ffxContext* context, ffxQueryDescHeader* desc)
 
         return FFX_API_RETURN_OK;
     }
+    else if (desc->type == FFX_API_QUERY_DESC_TYPE_UPSCALE_GETJITTERPHASECOUNT)
+    {
+        // Take output scaling into account
+        auto jitterPhaseDesc = (ffxQueryDescUpscaleGetJitterPhaseCount*) desc;
+
+        if (jitterPhaseDesc && State::Instance().currentFeature)
+            jitterPhaseDesc->displayWidth = State::Instance().currentFeature->TargetWidth();
+    }
 
     if (context != nullptr && _contexts.contains(*context) && !Config::Instance()->EnableHotSwapping.value_or_default())
     {
