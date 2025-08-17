@@ -61,7 +61,18 @@ static std::vector<std::string> splashText = { "May the coping commence...",
                                                "Real fake frames. Certified.",
                                                "The illusion of performance, perfected.",
                                                "This upscaler belongs in a museum!",
-                                               "Because native rendering is overrated." };
+                                               "Because native rendering is overrated.",
+                                               "The more you upscaler, the more you save",
+                                               "It's never too late to buy a better GPU",
+                                               "We don't need real pixel where we're going",
+                                               "Did you know that Intel released XeFG for everyone?",
+                                               "MFG totally works with Nukem's 100% no scam",
+                                               "Some of those pixels might even be real!",
+                                               "Just don't look too closely at the image",
+                                               "Even supports \"software\" XeSS!",
+                                               "Take RCAS, you might need it",
+                                               "Thanks nitec, back to you nitec",
+                                               "<Your funny text goes here>" };
 
 void MenuCommon::ShowTooltip(const char* tip)
 {
